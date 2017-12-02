@@ -1,20 +1,3 @@
-/**@<gettoken.h>::**/
-
-#define MAXSTRLEN 1024
-extern char lexeme[MAXSTRLEN+1];
-extern char *tokeninfo[];
-
-enum {
-    ID = 1024,
-    DEC,
-    EQ,
-    NEQ,
-    GEQ,
-    LEQ,
-    SCI,
-    DECFP,
-    OCT,
-    HEX,
-};
-
-int gettoken(FILE *);
+#define MAXID_SIZE 32
+extern char lexeme[MAXID_SIZE+1];//@ lexer.c
+extern int gettoken (FILE *);

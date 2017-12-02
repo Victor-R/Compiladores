@@ -1,257 +1,221 @@
-/**@<gettoken.c>::**/
-
-#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <tokens.h>
+#include <keywords.h>
 #include <gettoken.h>
 
-char lexeme[MAXSTRLEN+1];
-
-char *tokeninfo[] = {
-	"ID",
-    "DEC",
-    "EQ",
-    "NEQ",
-    "GEQ",
-    "LEQ",
-    "SCI",
-    "DECFP",
-    "OCT",
-    "HEX"
-};
-
-void skipspaces(FILE *tape)
+void skipspaces (FILE *tape)
 {
-    int	head;
-    while (isspace(head = getc(tape)));
-    
-    ungetc(head, tape);
+  int head;
+
+  while ( isspace ( head = getc (tape) ) && head != (' ' | '\n' | '\t') );
+  ungetc ( head, tape );
 }
 
-int isID(FILE *tape)
-{
-    int	head;
-    int i = 0;
+char lexeme[MAXID_SIZE+1];
 
-    if (isalpha(lexeme[i] = getc(tape))) {
-		i++;
-		
-        while (isalnum(lexeme[i] = getc(tape)))
-			if(i < MAXSTRLEN) {
-			   lexeme[i] = head; i++;
-			}
-        ungetc(head, tape);
-        lexeme[i] = 0;
-        printf("ID");
-        return ID;
-    }
-    ungetc(head, tape);    
-    return 0;
-}
+// ASGN = :=
+int isASGN(FILE * tape){
 
-int isDEC(FILE *tape)
-{
-    int	head;
-    int i = 0;
-    if (isdigit(head = getc(tape))) {
-		lexeme[i] = head; i++;
-        if (head == '0'){
-            return DEC;
-        }
-        while (isdigit(head = getc(tape)))
-			if(i < MAXSTRLEN) {
-			   lexeme[i] = head; i++;
-			}
-        ungetc(head, tape);
-        lexeme[i] = 0;
-        return DEC;
+  if((lexeme[0] = getc(tape)) == ':'){
+    if((lexeme[1] = getc(tape)) == '='){
+      lexeme[2] = 0;
+      return ASGN;
     }
-    ungetc(head, tape);
-    return 0;
-}
-
-int isEQ(FILE *tape)
-{
-    int	head;
-    if ((head = getc(tape)) == '=') {
-        if ((head = getc(tape)) == '=') {
-            return EQ;
-        }
-        ungetc(head, tape);
-        ungetc('=', tape);
-        return 0;
-    }
-    ungetc(head, tape);
-    return 0;
-}
-
-int isNEQ(FILE * tape)
-{
-    int             head;
-    if ((head = getc(tape)) == '!') {
-        if ((head = getc(tape)) == '=') {
-            return NEQ;
-        }
-        ungetc(head, tape);
-        ungetc('!', tape);
-        return 0;
-    }
-    ungetc(head, tape);
-    return 0;
-}
-
-int isGEQ(FILE * tape)
-{
-    int             head;
-    if ((head = getc(tape)) == '>') {
-        if ((head = getc(tape)) == '=') {
-            return GEQ;
-        }
-        ungetc(head, tape);
-        ungetc('>', tape);
-        return 0;
-    }
-    ungetc(head, tape);
-    return 0;
-}
-
-int isLEQ(FILE * tape)
-{
-    int             head;
-    if ((head = getc(tape)) == '<') {
-        if ((head = getc(tape)) == '=') {
-            return LEQ;
-        }
-        ungetc(head, tape);
-        ungetc('<', tape);
-        return 0;
-    }
-    ungetc(head, tape);
-    return 0;
-}
-
-int isSCI(FILE *tape) //acho que eh essa q precisa arrumar
-{
-  int head, sgn = 0;
-  if(toupper(head = getc(tape)) == 'E'){
-    if((head - getc(tape)) == '+' || head == '-'){
-      sgn = head;
-      if(!isdigit(head = getc(tape))){
-	ungetc(head, tape);
-	ungetc(sgn, tape);
-	ungetc('E', tape);
-	return 0;
-      }
-    }else{
-      if(!isdigit(head)){
-	ungetc(head, tape);
-	ungetc('E', tape);
-	return 0;}
-    }
-  while(isdigit(head = getc(tape))); ungetc(head, tape); return SCI;
+    ungetc(lexeme[1], tape);
   }
-  ungetc(head, tape);
+  ungetc(lexeme[0], tape);
   return 0;
 }
 
-int isDECFP(FILE *tape)
+// ID = [A-Za-z][A-Za-z0-9]*
+int isID(FILE *tape)
 {
-  int head, token = 0;
-  if(token = isDEC(tape)){
-    if((head = getc(tape)) == '.'){
-      token = DECFP;
-      while(isdigit(head = getc(tape)));
-      }
-      ungetc(head, tape);
-      isSCI(tape) && (token == DEC) && (token = DECFP);
+  int token = 0;
+  lexeme[token] = getc(tape);
+  if (isalpha (lexeme[token]) ) {
+    for(token = 1; isalnum(lexeme[token] = getc(tape)); token ++) {
+      if(token == MAXID_SIZE)
+        break;
+    }
+    ungetc (lexeme[token], tape);
+    lexeme[token] = 0;
+
+    token = iskeyword(lexeme);
+    if(token)
       return token;
-  }else if(head = getc(tape) == '.'){
-		if(!isdigit(head = getc(tape))){
-			ungetc(head, tape);
-			ungetc('.', tape);
-			return 0;
-		}
-		while(isdigit(head = getc(tape)));
-		ungetc(head, tape);
-		isSCI(tape);
-		return DECFP;
+
+    return ID;
   }
-	ungetc(head, tape);
-	return 0;
+  ungetc (lexeme[token], tape);
+  return 0;
 }
 
+// DEC = [1-9][0-9]* | 0
+int isDEC(FILE *tape)
+{
+  int i = 0;
+  if (isdigit (lexeme[i] = getc(tape))) {
+    if (lexeme[i] == '0') {
+      if( (lexeme[++i] = getc(tape)) == '0' || lexeme[i] == EOF || lexeme[i] == EOL ) {
+        return INTCONST;
+      } else if (lexeme[i] == '.' || tolower(lexeme[i]) == 'e') {
+        //for later float verification
+        ungetc (lexeme[i], tape);
+        lexeme[i] = 0;
+        return INTCONST;
+      } else {
+        ungetc (lexeme[i], tape);
+        ungetc (lexeme[i-1], tape);
+        return 0;
+      }
+    }
+    // [0-9]*
+    for (i=1; isdigit (lexeme[i] = getc(tape)); i++);
+    ungetc (lexeme[i], tape);
+    lexeme[i] = 0;
+    return INTCONST;
+  }
+  ungetc (lexeme[i], tape);
+  return 0;
+}
+
+// OCTAL =  0[1-7][0-7]*
 int isOCT(FILE *tape)
 {
-	int token = 0;
-	token = getc(tape);
-	int head = getc(tape);
-	if(token == '0'){
-		if(head >= '0' && head <= '7'){
-			while ( (head = getc(tape))	>= '0' && head <= '7');
-			ungetc(head, tape);
-			return OCT;
-		} else {
-			ungetc(head, tape);
-			ungetc(token, tape);
-			return 0;
-		}
-	}
-	ungetc(token, tape);
-	return 0;
+  int i = 0;
+  lexeme[i] = getc(tape);
+  if (lexeme[i] == '0') {
+    lexeme[++i] = getc(tape);
+    if ( lexeme[i] >= '1' && lexeme[i] <= '7') {
+      while ( (lexeme[++i] = getc(tape)) >= '0' && lexeme[i] <= '7');
+      ungetc (lexeme[i], tape);
+      return OCTAL;
+    } else {
+      ungetc (lexeme[i], tape);
+      ungetc (lexeme[i-1], tape);
+      return 0;
+    }
+  }
+  ungetc (lexeme[i], tape);
+  return 0;
 }
 
+// HEX = 0[xX][0-9a-fA-F]+
 int isHEX(FILE *tape)
 {
-	int head = getc(tape);
-	int aux = head;
-	if ( head == '0'){
-		head = getc(tape);
-		if (head =='x'){
-			if ( ((head = getc(tape)) >= '0' && head <= '9') || (head >= 'a' && head <= 'f') || (head >= 'A' && head <= 'F')){
-				while ( ((head = getc(tape)) >= '0' && head <= '9') || (head >= 'a' && head <= 'f') || (head >= 'A' && head <= 'F') );
-				if(head = getc(tape)!=EOF)
-					return 0;
-				else{
-					ungetc(head,tape);
-					return HEX;
-				}
-			}
-			else{
-				ungetc(head,tape);
-			}
-		}else{
-			ungetc(head,tape);
-			ungetc(aux,tape);
-		}
-	}else{
-		ungetc(head,tape);
-	}
-	return 0;
-}	
+  int i = 0;
+  lexeme[i] = getc(tape);
+  if (lexeme[i] == '0') {
+    if ( tolower((lexeme[++i] = getc(tape))) == 'x'){
+      lexeme[++i] = getc(tape);
+      if ( isdigit(lexeme[i]) || (tolower(lexeme[i]) >= 'a' && tolower(lexeme[i]) <= 'f') ) {
+        while ( isdigit((lexeme[++i] = getc(tape))) || (tolower(lexeme[i]) >= 'a' && tolower(lexeme[i]) <= 'f') );
+        ungetc(lexeme[i],tape);
+        return HEX;
 
-int gettoken(FILE *tape)
-{
-    int	token;
-    skipspaces(tape);
-    if(
-        (token = isID(tape))   ||
-        (token = isDEC(tape))  || //NUM
-        (token = isEQ(tape))   ||
-        (token = isNEQ(tape))  ||
-        (token = isGEQ(tape))  ||
-        (token = isLEQ(tape))  ||
-		(token = isSCI(tape))  ||
-		(token = isDECFP(tape))||
-		(token = isOCT(tape))  ||
-		(token = isHEX(tape))
-		) {printf(" tolkien=%d ", token);return token;}
-			
-		
-		token = getc(tape);
+      } else {
+        ungetc(lexeme[i],tape);
+        ungetc(lexeme[i-1],tape);
+        ungetc(lexeme[i-2],tape);
+        return 0;
+      }
 
-		return token;
-	/*lexeme[0] = getc(tape); //.-.
-	lexeme[1] = 0;
-    return lexeme[0];*/
+    } else{
+      ungetc(lexeme[i],tape);
+      ungetc(lexeme[i-1],tape);
+      return 0;
+    }
+
+  } else {
+    ungetc(lexeme[i],tape);
+  }
+  return 0;
 }
 
-		
+/* FLOAT = ( DEC ‘.’ DIGIT* | ‘.’ DIGIT+ ) EXP? | DEC EXP
+
+DIGIT = [0-9]
+EXP =  ('E'|'e') (‘+’|‘-’)? DIGIT+  */
+int isFLT(FILE *tape) {
+
+  int i;
+  if (isDEC(tape)) { // begins as decimal
+
+    i = strlen(lexeme);
+    lexeme[i] = getc(tape);
+
+    if (lexeme[i] == '.'){
+      for(i++; isdigit(lexeme[i] = getc(tape)); i++);
+      ungetc(lexeme[i], tape);
+      lexeme[i] = 0;
+      return FLTCONST;
+    } else if (tolower(lexeme[i]) == 'e') {
+      lexeme[++i] = getc(tape);
+
+      if (isdigit(lexeme[i]) || lexeme[i] == '+' || lexeme[i] == '-') {
+        lexeme[++i] = getc(tape);
+        if (isdigit(lexeme[i])) {
+          for(i++; isdigit(lexeme[i] = getc(tape)); i++);
+          ungetc(lexeme[i], tape);
+          lexeme[i] = 0;
+          return FLTCONST;
+        }
+      }
+
+      ungetc(lexeme[i], tape);
+      lexeme[i] = 0;
+
+      return 0;
+    }
+
+    ungetc(lexeme[i], tape);
+    lexeme[i] = 0;
+    return INTCONST;
+  }
+
+  lexeme[0] = getc(tape);
+  if (lexeme[0] == '.') {
+
+    i = 1;
+    if (isdigit(lexeme[i] = getc(tape))) {
+      for(i++; isdigit(lexeme[i] = getc(tape)); i++);
+      ungetc(lexeme[i], tape);
+      lexeme[i] = 0;
+      return FLTCONST;
+    }
+    ungetc(lexeme[1], tape);
+  }
+  ungetc(lexeme[0], tape);
+  return 0;
+}
+
+// gettoken verifies token by token of the given input
+int gettoken (FILE *tokenstream)
+{
+  int token;
+  skipspaces (tokenstream);
+
+  token = isASGN(tokenstream);
+  if (token) return token;
+
+  token = isID(tokenstream);
+  if (token) return token;
+
+  token = isDEC (tokenstream);
+  if (token) return token;
+
+  token = isFLT(tokenstream);
+  if (token) return token;
+
+  token = isOCT(tokenstream);
+  if (token) return token;
+
+  token = isHEX (tokenstream);
+  if (token) return token;
+
+  token = getc (tokenstream);
+  return token;
+}

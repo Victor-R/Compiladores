@@ -1,9 +1,18 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <gettoken.h>
-#include <parser.h>
 #include <string.h>
+#include <math.h>
+
+// Local include//
+#include <parser.h>
+#include <gettoken.h>
+#include <tokens.h>
+#include <keywords.h>
+#include <symtab.h>
+#include <mypas.h>
+#include <pseudoassembly.h>
+
 
 int	lookahead;
 
@@ -16,6 +25,7 @@ int semanticErrorNum()
   ERROR_COUNT++;
   return ERROR_COUNT;
 }
+
 void match(int expected) //match
 {
     if (expected == lookahead) {
@@ -29,9 +39,10 @@ void match(int expected) //match
     }
 }
 
+
 void mypas(void)
 {
-  lookahead = gettoken (source);
+  lookahead = gettoken (src);
   var_dec();
   match('.');
 }
@@ -56,13 +67,13 @@ void declare(void)
       // pega o tipo das variaveis declaradas
       type =  /*]]*/ vartype();
 
-      // insere os valores e tipos das variaveis no symtab 
-      
+      // insere os valores e tipos das variaveis no symtab
+
       for(i=0; namev[i]; i++) {
         if(symtab_append(namev[i], type) == -2)
           fprintf(stderr,"%d: FATAL ERROR -2: no more space in symtab", semanticErrorNum());
       }
-      
+
       match(';');
     } while(lookahead == ID);
   }
@@ -121,7 +132,7 @@ void if_stmt(void)
 {
   int _endif, _else;
   match(IF);
-  expr(BOOLEAN);  
+  expr(BOOLEAN);
   fprintf(object, "\tjz .L%d\n", _endif = _else = labelcounter++);
   match(THEN);
   stmt();
@@ -249,47 +260,47 @@ int smpexpr(int inherited_type)
       fprintf(stderr, "%d: incompatible unary operator: fatal error.\n",semanticErrorNum());
     } else if (acctype == 0) {
       acctype = INTEGER;
-    }    
+    }
   } else if (lookahead == NOT) {
-    match(NOT);    
+    match(NOT);
     if(acctype > BOOLEAN) { // "not" não é compativel com o tipo não booleano
       fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
     }
-    acctype = BOOLEAN;    
+    acctype = BOOLEAN;
   }
 
   T_entry:
   F_entry:
     switch(lookahead){
 
-      case ID:        
+      case ID:
         varlocality = symtab_lookup(lexeme);
         if(varlocality < 0) {
           fprintf(stderr, "%d: parser: %s not declared... fatal error!\n", semanticErrorNum(),lexeme);
 	        syntype = -1;
         } else {
 	        syntype = symtab[varlocality][1];
-	      }        
+	      }
 	if (acctype == 0){
 	  acctype = syntype;
 	}
         match(ID);
-        if (lookahead == ASGN) {	    
+        if (lookahead == ASGN) {
 		  lvalue_seen = 1;
-		  ltype = syntype;		  
+		  ltype = syntype;
 	    match(ASGN);
 	    rtype = expr(ltype);
 
-	    
+
 	    if(type_check(ltype, rtype)) {
 	      acctype = max(rtype,acctype);
 	    } else {
 	      acctype = -1;
-	    }	    
+	    }
 	}else if(varlocality > -1) {
           fprintf(object, "\tpushl %%eax\n\tmovl %s,%%eax\n",
             symtab_stream + symtab[varlocality][0]);
-        }        
+        }
         break;
 
       case FLTCONST:
@@ -320,14 +331,14 @@ int smpexpr(int inherited_type)
         match('(');
 	      syntype = expr(0);
 
-	      
+
 	      if(type_check(syntype, acctype)) {
 	         acctype = max(acctype,syntype);
 	      } else {
 		 printf("default");
 	         fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
 		 acctype = -1;
-	      }	      
+	      }
         match(')');
     }
 
@@ -344,12 +355,12 @@ int smpexpr(int inherited_type)
 
     if(add_flag = addop())
       goto T_entry;
-       
+
     if(lvalue_seen && varlocality > -1) {
       switch(ltype) {
         // verifica que tipo de instruções vão ser trabalhadas
-        case INTEGER: 
-        case REAL: 
+        case INTEGER:
+        case REAL:
         case BOOLEAN:
           lmovel(symtab_stream + symtab[varlocality][0]); // 32-bit
           break;
@@ -445,7 +456,7 @@ int isotimes(int otimes){
 void stmt(void){
 	switch (lookahead) {
     case BEGIN:
-      beginblock();
+      blockstart();
       break;
 
     case IF:
@@ -459,13 +470,13 @@ void stmt(void){
     case REPEAT:
       repeat_stmt();
       break;
-    
-    case ID: 
-    case FLTCONST: 
-    case INTCONST: 
-    case TRUE: 
-    case FALSE: 
-    case NOT: 
+
+    case ID:
+    case FLTCONST:
+    case INTCONST:
+    case TRUE:
+    case FALSE:
+    case NOT:
     case '-':
     case '(':
       smpexpr(0);
