@@ -1,6 +1,6 @@
 #include <string.h>
 #include <parser.h>
-#include <lexer.h>
+#include <gettoken.h>
 #include <symtab.h>
 
 // col 0 of symtab: location of the symbol name(symtab[i][1]) in the symtab_stream

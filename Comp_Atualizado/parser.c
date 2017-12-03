@@ -5,6 +5,7 @@
 #include <math.h>
 
 // Local include//
+#include <macros.h>
 #include <parser.h>
 #include <gettoken.h>
 #include <tokens.h>
@@ -12,6 +13,7 @@
 #include <symtab.h>
 #include <mypas.h>
 #include <pseudoassembly.h>
+
 
 
 int	lookahead;

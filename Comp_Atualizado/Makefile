@@ -4,16 +4,15 @@ OPTFLG=-g
 
 project = mypas
 
-relocatables = $(project).o lexer.o parser.o keywords.o symtab.o pseudoassembly.o
+relocatables = $(project).o gettoken.o parser.o keywords.o symtab.o pseudoassembly.o
+
+executable = $(project)
 
 $(executable): $(relocatables)
 	cc -o $(executable) $(relocatables) -lm
-
-parser-main: parser-main.o gettoken.o parser.o
-
 clean:
-	$(RM) $(relocatables)
+	$(RM)  $(relocatables)
 mostlyclean: clean
-		$(RM) $(executable) *~
+	$(RM) $(executable) *~
 indent:
-				indent -nfca -nsc -orig - nuts - ts4 *.[ch]
+	indent -nfca -nsc -orig - nuts - ts4 *.[ch]
