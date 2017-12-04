@@ -44,7 +44,7 @@ void match(int expected) //match
 
 void mypas(void)
 {
-  lookahead = gettoken (src);
+  lookahead = gettoken(src);
   var_dec();
   match('.');
 }
@@ -56,31 +56,31 @@ void var_dec(void)
   sim_used(); // simbolos usados
 }
 
-
+//Preenche tabela de simbolos, com nome e tipo
 void declare(void)
 {
   if (lookahead == VAR) {
     match(VAR);
     do {
       int type,i;
-      // pega os nomes das variaveis declaradas
+      // pega os nomes das variaveis declaradas para a tabela de simbolos
       char **namev = nome_lista();
       match(':');
-      // pega o tipo das variaveis declaradas
-      type =  /*]]*/ vartype();
+      // pega o tipo das variaveis declaradas para a tabela de simbolos
+      type =  vartype();
 
-      // insere os valores e tipos das variaveis no symtab
 
+      // insere os nomes e tipos das variaveis no symtab
       for(i=0; namev[i]; i++) {
         if(symtab_append(namev[i], type) == -2)
           fprintf(stderr,"%d: FATAL ERROR -2: no more space in symtab", semanticErrorNum());
       }
-
       match(';');
     } while(lookahead == ID);
   }
 }
 
+// Adiciona  os nomes das variáveis em uma lista para serem colocados na tabela de simbolos
 char **nome_lista(void)
 {
   char **symbolvec = (char **)calloc(MAX_ARG_NUM, sizeof(char **));
@@ -96,6 +96,7 @@ char **nome_lista(void)
   return symbolvec;
 }
 
+// Verifica qual o tipo da variavel e o retorna
 int vartype(void)
 {
   switch(lookahead) {
@@ -106,6 +107,10 @@ int vartype(void)
     case REAL:
       match(REAL);
       return REAL;
+
+    /*case STRING:
+        match(STRING);
+        return STRING;*/
 
     default:
       match(BOOLEAN);
@@ -185,12 +190,15 @@ void repeat_stmt(void)
   expr(BOOLEAN);
 }
 
+//Verifica a relação entre tipos na expressão para promover o tipo correto
+//Ex: REAL -> INTEGER + REAL; (Saída REAL)
  int type_check(int ltype, int rtype)
  {
    switch(ltype) {
-	//TODO: MORE TYPES :D
+	/*TODO: MORE TYPES :D*/
      case BOOLEAN:
      case INTEGER:
+     /*case CHAR:*/
        if(rtype == ltype)
          return ltype;
        break;
@@ -210,6 +218,14 @@ void repeat_stmt(void)
          case DOUBLE:
            return ltype;
        }
+
+      /*case STRING:
+        switch(rtype){
+          case CHAR:
+            return ltype;
+        }*/
+
+
    }
    return 0;
  }
@@ -276,34 +292,35 @@ int smpexpr(int inherited_type)
     switch(lookahead){
 
       case ID:
-        varlocality = symtab_lookup(lexeme);
+        varlocality = symtab_lookup(lexeme); // pega a posição da variavel na symtab
         if(varlocality < 0) {
           fprintf(stderr, "%d: parser: %s not declared... fatal error!\n", semanticErrorNum(),lexeme);
 	        syntype = -1;
         } else {
-	        syntype = symtab[varlocality][1];
+	        syntype = symtab[varlocality][1]; // pega o tipo da variavel
 	      }
-	if (acctype == 0){
-	  acctype = syntype;
-	}
+      	if (acctype == 0){
+      	  acctype = syntype;
+      	}
         match(ID);
         if (lookahead == ASGN) {
-		  lvalue_seen = 1;
-		  ltype = syntype;
-	    match(ASGN);
-	    rtype = expr(ltype);
+    		  lvalue_seen = 1;
+    		  ltype = syntype;
+    	    match(ASGN);
+    	    rtype = expr(ltype);
 
 
-	    if(type_check(ltype, rtype)) {
-	      acctype = max(rtype,acctype);
-	    } else {
-	      acctype = -1;
-	    }
-	}else if(varlocality > -1) {
+    	    if(type_check(ltype, rtype)) { // Verifica os tipos da expressao e promove os tipos caso necessário
+    	      acctype = max(rtype,acctype);
+    	    } else {
+    	      acctype = -1;
+    	    }
+	     }else if(varlocality > -1) {
           fprintf(object, "\tpushl %%eax\n\tmovl %s,%%eax\n",
             symtab_stream + symtab[varlocality][0]);
-        }
-        break;
+       }
+
+      break;
 
       case FLTCONST:
         {
@@ -313,39 +330,40 @@ int smpexpr(int inherited_type)
           rmovel(fltIEEE);
         }
         match(FLTCONST);
-	syntype = REAL;
-	if (acctype > BOOLEAN || acctype == 0) {
-	    acctype = max(acctype, syntype);
-	}
-        break;
+      	syntype = REAL;
+      	if (acctype > BOOLEAN || acctype == 0) {
+      	    acctype = max(acctype, syntype);
+      	}
+
+      break;
 
       case INTCONST:
-	    rmovel((char*)lexeme);
+	      rmovel((char*)lexeme);
         match(INTCONST);
-	syntype = INTEGER;
-	if (acctype > BOOLEAN || acctype == 0) {
-	    acctype = max(acctype, syntype);
-	}
+      	syntype = INTEGER;
+      	if (acctype > BOOLEAN || acctype == 0) {
+      	    acctype = max(acctype, syntype);
+      	}
 
         break;
 
       default:
-        match('(');
+        match('('); // Se não encontrar nenhum tipo numérico, a expressão pode haver (
 	      syntype = expr(0);
 
 
 	      if(type_check(syntype, acctype)) {
 	         acctype = max(acctype,syntype);
 	      } else {
-		 printf("default");
-	         fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
-		 acctype = -1;
-	      }
-        match(')');
+  		 printf("default");
+  	         fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
+  		 acctype = -1;
+  	      }
+       match(')');
     }
 
      if(mul_flag){
-       /**/mulint();/**/
+       mulint();
     }
 
     if(mul_flag = mulop())

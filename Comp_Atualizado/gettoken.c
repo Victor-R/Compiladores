@@ -6,6 +6,7 @@
 #include <keywords.h>
 #include <gettoken.h>
 
+// Pula os espaços vazios da fita 
 void skipspaces (FILE *tape)
 {
   int head;
@@ -62,7 +63,6 @@ int isDEC(FILE *tape)
       if( (lexeme[++i] = getc(tape)) == '0' || lexeme[i] == EOF || lexeme[i] == EOL ) {
         return INTCONST;
       } else if (lexeme[i] == '.' || tolower(lexeme[i]) == 'e') {
-        //for later float verification
         ungetc (lexeme[i], tape);
         lexeme[i] = 0;
         return INTCONST;
@@ -192,30 +192,30 @@ int isFLT(FILE *tape) {
   return 0;
 }
 
-// gettoken verifies token by token of the given input
+// gettoken verifica Token por token da tokenstream
 int gettoken (FILE *tokenstream)
 {
   int token;
   skipspaces (tokenstream);
 
-  token = isASGN(tokenstream);
+  token = isASGN(tokenstream);  // se For símbolo de atribuição := retorna ASGN ao token
   if (token) return token;
 
-  token = isID(tokenstream);
+  token = isID(tokenstream);    // Se for um Identificador retorna ID ao token
   if (token) return token;
 
-  token = isDEC (tokenstream);
+  token = isDEC (tokenstream);  // Se for um número decimal retorna DEC ao token
   if (token) return token;
 
-  token = isFLT(tokenstream);
+  token = isFLT(tokenstream);   // Se for um número real retorna FLT ao token
   if (token) return token;
 
-  token = isOCT(tokenstream);
+  token = isOCT(tokenstream);   // Se for um número Octal retorna OCT ao token
   if (token) return token;
 
-  token = isHEX (tokenstream);
+  token = isHEX (tokenstream);  // Se for um número Hexadecimal retorna HEX ao token
   if (token) return token;
 
-  token = getc (tokenstream);
+  token = getc (tokenstream);   // Se não atender a nenhuma das anteriores retorna um char. Ex: ',' , ';'
   return token;
 }

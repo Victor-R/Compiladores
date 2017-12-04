@@ -12,6 +12,8 @@ enum {
   INTEGER,
   REAL,
   DOUBLE,
+  /*STRING,
+  CHAR,*/
   DIV,
   MOD,
   AND,
