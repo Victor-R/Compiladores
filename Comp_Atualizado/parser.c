@@ -103,14 +103,18 @@ int vartype(void)
     case INTEGER:
       match(INTEGER);
       return INTEGER;
+      
+    case LONGINT:
+      match(LONGINT); //  NEW
+      return LONGINT;
 
     case REAL:
       match(REAL);
       return REAL;
-
-    /*case STRING:
-        match(STRING);
-        return STRING;*/
+    
+    case DOUBLE:
+      match(DOUBLE);    //NEW?
+      return DOUBLE;
 
     default:
       match(BOOLEAN);
@@ -195,37 +199,39 @@ void repeat_stmt(void)
  int type_check(int ltype, int rtype)
  {
    switch(ltype) {
-	/*TODO: MORE TYPES :D*/
+	
      case BOOLEAN:
-     case INTEGER:
-     /*case CHAR:*/
+     case INTEGER:     
        if(rtype == ltype)
          return ltype;
-       break;
+     break;
+
+
+     case LONGINT:
+        switch(rtype){
+          case INTEGER:
+            return ltype;
+        }
+     break;
 
      case REAL:
        switch(rtype) {
          case INTEGER:
+         case LONGINT:
          case REAL:
          return ltype;
        }
-       break;
+     break;
 
      case DOUBLE:
        switch(rtype) {
          case INTEGER:
+         case LONGINT:
          case REAL:
          case DOUBLE:
            return ltype;
        }
-
-      /*case STRING:
-        switch(rtype){
-          case CHAR:
-            return ltype;
-        }*/
-
-
+     break;
    }
    return 0;
  }
@@ -281,7 +287,7 @@ int smpexpr(int inherited_type)
     }
   } else if (lookahead == NOT) {
     match(NOT);
-    if(acctype > BOOLEAN) { // "not" não é compativel com o tipo não booleano
+    if(acctype > BOOLEAN) { // "not" não é compativel com tipos não booleano
       fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
     }
     acctype = BOOLEAN;
@@ -315,10 +321,11 @@ int smpexpr(int inherited_type)
     	    } else {
     	      acctype = -1;
     	    }
-	     }else if(varlocality > -1) {
-          fprintf(object, "\tpushl %%eax\n\tmovl %s,%%eax\n",
-            symtab_stream + symtab[varlocality][0]);
-       }
+  	    }else if(varlocality > -1) {
+            /*fprintf(object, "\tpushl %%eax\n\tmovl %s,%%eax\n",
+            symtab_stream + symtab[varlocality][0]); OLD*/
+            fprintf(object, "\tmovl $%s, %s(%%rip)",(symtab_stream + symtab[varlocality][0]),symtab[varlocality][0]);
+        }
 
       break;
 
@@ -327,7 +334,8 @@ int smpexpr(int inherited_type)
           float lexval = atof(lexeme);
           char *fltIEEE = malloc(sizeof(lexeme) + 1);
           sprintf(fltIEEE, "$%i", ((int *)&lexval) );
-          rmovel(fltIEEE);
+          //rmovel(fltIEEE); OLD
+          rmovess(fltIEEE);
         }
         match(FLTCONST);
       	syntype = REAL;
@@ -355,14 +363,14 @@ int smpexpr(int inherited_type)
 	      if(type_check(syntype, acctype)) {
 	         acctype = max(acctype,syntype);
 	      } else {
-  		 printf("default");
-  	         fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
-  		 acctype = -1;
-  	      }
+  		     printf("default");
+  	       fprintf(stderr, "%d: incompatible unary operator: fatal error.\n", semanticErrorNum());
+  		     acctype = -1;
+  	    }
        match(')');
     }
 
-     if(mul_flag){
+    if(mul_flag){
        mulint();
     }
 
@@ -370,7 +378,7 @@ int smpexpr(int inherited_type)
       goto F_entry;
 
     if(add_flag){
-       /**/addint();/**/
+       addint();
     }
 
     if(add_flag = addop())
@@ -391,6 +399,26 @@ int smpexpr(int inherited_type)
 
         default: //case  BOOLEAN
           break;
+        /*
+        case INTEGER:
+          lmovel(symtab_stream + symtab[varlocality][0]);
+        break;
+
+        case LONG:
+          lmoveq(symtab_stream + symtab[varlocality][0]);
+        break;
+
+        case REAL:
+          lmovss(symtab_stream + symtab[varlocality][0]);
+        break;
+
+        case DOUBLE:
+          lmovsd(symtab_stream + symtab[varlocality][0]);
+        break;
+
+        default://BOOLEAN
+        break;
+        */
       }
     }
 
@@ -516,9 +544,12 @@ void command(void){
 
 /* addop -> + | - | OR */
 int addop (void)
-{
+{  
 	switch(lookahead){
 	case '+':
+      // TEMOS 4 SITUAÇÕES ID+ID|VALUE+ID|ID+VALUE|VALUE+VALUE 
+      // PRECISO TRAZER O VALOR DA ESQUERDA, POIS O QUE ESTÁ NO LOOKAHEAD É '+'
+
 			match('+');
 			/**/addint();/**/
 			return '+';

@@ -13,6 +13,7 @@ char *keywords[] = {
   "var",
   "boolean",
   "integer",
+  "longint",//NEW
   "real",
   "double",
   "div",

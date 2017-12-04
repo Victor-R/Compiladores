@@ -10,10 +10,9 @@ enum {
   VAR,
   BOOLEAN,
   INTEGER,
+  LONGINT,//TODO: IMPLEMENTAR ESSA POHA
   REAL,
-  DOUBLE,
-  /*STRING,
-  CHAR,*/
+  DOUBLE, 
   DIV,
   MOD,
   AND,
