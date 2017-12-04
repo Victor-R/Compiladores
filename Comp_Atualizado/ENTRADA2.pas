@@ -2,13 +2,11 @@ var x, y : integer;
 begin
     x := 2;
     y := -2;
-  while y < -1 do
-    begin
+  repeat
     x := y;
     x := x + 45;
-    y := y + 1;
-    x := x - 1;
-    end;
+    y := y + 1
+  until y < -1;
   if x > 3 then
     begin
       x := 2 * y + 4;

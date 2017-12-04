@@ -1,6 +1,6 @@
 /**@<pseudoassembly.h>::**/
 #include <mypas.h>
-
+#include <string.h>
 /*unified label counter*/
 
 extern int labelcounter;
@@ -9,7 +9,9 @@ extern int labelcounter;
 extern int reg_counter_int32;
 extern int reg_counter_int64;
 extern int reg_counter_float;
+extern char last_reg_used[6];
 
+//char *reg_return(void);
 /*control pseudo instructions*/
 
 int gofalse(int label);
@@ -23,12 +25,12 @@ int jne(int label);
 int cmpl();
 int mklabel (int label);
 
-int lmovel (char const *variable);
+int lmovel (char const *variable, int con_flag);
 int lmoveq (char const *variable);
 int lmovss (char const *variable);
 int lmovsd (char const *variable);
 
-int rmovel (char const *variable);
+int rmovel (char const *variable, int neg_flag);
 //int rmoveq (char const *variable);
 int rmovess(char const *variable);
 //int rmovesd(char const *variable);

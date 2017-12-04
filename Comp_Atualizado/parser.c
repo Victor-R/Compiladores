@@ -103,7 +103,7 @@ int vartype(void)
     case INTEGER:
       match(INTEGER);
       return INTEGER;
-      
+
     case LONGINT:
       match(LONGINT); //  NEW
       return LONGINT;
@@ -111,7 +111,7 @@ int vartype(void)
     case REAL:
       match(REAL);
       return REAL;
-    
+
     case DOUBLE:
       match(DOUBLE);    //NEW?
       return DOUBLE;
@@ -144,6 +144,7 @@ void if_stmt(void)
   int _endif, _else;
   match(IF);
   expr(BOOLEAN);
+  cmpl();
   fprintf(object, "\tjz .L%d\n", _endif = _else = labelcounter++);
   match(THEN);
   stmt();
@@ -151,7 +152,7 @@ void if_stmt(void)
     match(ELSE);
     _endif = jump(labelcounter++);
     mklabel(_else);
-    mklabel(_endif);
+
     stmt();
   }
   mklabel(_endif);
@@ -160,14 +161,17 @@ void if_stmt(void)
 void while_stmt(void)
 {
   int while_head, while_tail;
+
   match(WHILE);
   mklabel(while_head = labelcounter++);
-  expr(BOOLEAN);
-  gofalse(while_tail = labelcounter++);
+  expr(BOOLEAN);                        // Escreve a expressão
+  cmpl();                               // Faz a comparação
+  gofalse(while_tail = labelcounter++); // Se falso, vai para depois do while
   match(DO);
   stmt();
-  jump(while_head);
-  mklabel(while_tail);
+  jump(while_head);                     //volta para o começo, para o laço
+  mklabel(while_tail);                  // Escreve a label da calda
+
 }
 
 
@@ -184,7 +188,14 @@ void blockstart(void)
 
 void repeat_stmt(void)
 {
+  int repeat_head=0,repeat_tail=0;
+
+  repeat_head = repeat_head + labelcounter++;
+  repeat_tail = repeat_tail + labelcounter++;
+
   match(REPEAT);
+  mklabel(repeat_head);
+  //fazer label
   stmt();
   while(lookahead == ';') {
     match(';');
@@ -192,6 +203,11 @@ void repeat_stmt(void)
   }
   match(UNTIL);
   expr(BOOLEAN);
+  cmpl();
+  gofalse(repeat_tail); // se falso pula para o label da repeat_tail
+  jump(repeat_head);   // se verdadeiro pula de volta para o label da repeat_head
+  mklabel(repeat_tail);
+  //testar label e dar jmp
 }
 
 //Verifica a relação entre tipos na expressão para promover o tipo correto
@@ -199,9 +215,9 @@ void repeat_stmt(void)
  int type_check(int ltype, int rtype)
  {
    switch(ltype) {
-	
+
      case BOOLEAN:
-     case INTEGER:     
+     case INTEGER:
        if(rtype == ltype)
          return ltype;
      break;
@@ -276,9 +292,12 @@ int smpexpr(int inherited_type)
 	acctype = inherited_type,// acumulador de tipo
 	syntype,                 // tipo de simbolo declarado em symtab
 	ltype,           // syntype para verificação futura
-	rtype;     // tipo atualizado (pode ser promovido)
+	rtype,
+  neg_flag = 0,    // tipo atualizado (pode ser promovido)
+  con_flag = 0;
 
   if(lookahead == '-'){
+    neg_flag = 1;
     match('-');
     if(acctype == BOOLEAN) { // o char "menos" não é compativel com BOOLEAN
       fprintf(stderr, "%d: incompatible unary operator: fatal error.\n",semanticErrorNum());
@@ -299,6 +318,7 @@ int smpexpr(int inherited_type)
 
       case ID:
         varlocality = symtab_lookup(lexeme); // pega a posição da variavel na symtab
+
         if(varlocality < 0) {
           fprintf(stderr, "%d: parser: %s not declared... fatal error!\n", semanticErrorNum(),lexeme);
 	        syntype = -1;
@@ -312,6 +332,7 @@ int smpexpr(int inherited_type)
         if (lookahead == ASGN) {
     		  lvalue_seen = 1;
     		  ltype = syntype;
+
     	    match(ASGN);
     	    rtype = expr(ltype);
 
@@ -322,9 +343,9 @@ int smpexpr(int inherited_type)
     	      acctype = -1;
     	    }
   	    }else if(varlocality > -1) {
-            /*fprintf(object, "\tpushl %%eax\n\tmovl %s,%%eax\n",
-            symtab_stream + symtab[varlocality][0]); OLD*/
-            fprintf(object, "\tmovl $%s, %s(%%rip)",(symtab_stream + symtab[varlocality][0]),symtab[varlocality][0]);
+            fprintf(object, "\tmovl\t%s(%%rip),\t%%eax\n",
+            symtab_stream + symtab[varlocality][0]);
+            strcpy(last_reg_used,"eax");
         }
 
       break;
@@ -346,7 +367,14 @@ int smpexpr(int inherited_type)
       break;
 
       case INTCONST:
-	      rmovel((char*)lexeme);
+        con_flag = 1;
+        if(neg_flag){
+          rmovel((char*)(lexeme),neg_flag);
+          neg_flag = 0;
+        }else{
+          rmovel((char*)lexeme,neg_flag);
+        }
+
         match(INTCONST);
       	syntype = INTEGER;
       	if (acctype > BOOLEAN || acctype == 0) {
@@ -356,7 +384,7 @@ int smpexpr(int inherited_type)
         break;
 
       default:
-        match('('); // Se não encontrar nenhum tipo numérico, a expressão pode haver (
+        match('(');
 	      syntype = expr(0);
 
 
@@ -378,33 +406,41 @@ int smpexpr(int inherited_type)
       goto F_entry;
 
     if(add_flag){
-       addint();
+      if(add_flag=='+'){
+        addint();
+      }else if (add_flag=='-'){
+        subint();
+      }
+       //printf("Eu entrei no if(add_flag)\n" );
     }
 
     if(add_flag = addop())
+      //printf("Eu entrei no if(addop\n" );
       goto T_entry;
 
     if(lvalue_seen && varlocality > -1) {
       switch(ltype) {
         // verifica que tipo de instruções vão ser trabalhadas
+        /*
         case INTEGER:
         case REAL:
         case BOOLEAN:
-          lmovel(symtab_stream + symtab[varlocality][0]); // 32-bit
+          //lmovel(symtab_stream + symtab[varlocality][0]); // 32-bit
           break;
 
         case DOUBLE:
-          lmoveq(symtab_stream + symtab[varlocality][0]); // 64-bit
+          //lmoveq(symtab_stream + symtab[varlocality][0]); // 64-bit
           break;
 
         default: //case  BOOLEAN
-          break;
-        /*
+          break;*/
+
         case INTEGER:
-          lmovel(symtab_stream + symtab[varlocality][0]);
+          lmovel(symtab_stream + symtab[varlocality][0],con_flag);
+          con_flag = 0;
         break;
 
-        case LONG:
+        case LONGINT:
           lmoveq(symtab_stream + symtab[varlocality][0]);
         break;
 
@@ -418,7 +454,7 @@ int smpexpr(int inherited_type)
 
         default://BOOLEAN
         break;
-        */
+
       }
     }
 
@@ -544,10 +580,10 @@ void command(void){
 
 /* addop -> + | - | OR */
 int addop (void)
-{  
+{
 	switch(lookahead){
 	case '+':
-      // TEMOS 4 SITUAÇÕES ID+ID|VALUE+ID|ID+VALUE|VALUE+VALUE 
+      // TEMOS 4 SITUAÇÕES ID+ID|VALUE+ID|ID+VALUE|VALUE+VALUE
       // PRECISO TRAZER O VALOR DA ESQUERDA, POIS O QUE ESTÁ NO LOOKAHEAD É '+'
 
 			match('+');

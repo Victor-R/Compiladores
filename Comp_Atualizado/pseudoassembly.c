@@ -6,9 +6,10 @@ int labelcounter = 1;
 
 /* contadores de registradores*/
 
-int reg_counter_int32 = 0;   
-int reg_counter_int64 = 0;   
+int reg_counter_int32 = 0;
+int reg_counter_int64 = 0;
 int reg_counter_float = 0; //OK
+char last_reg_used[6];
 
 /*control pseudo instructions*/
 
@@ -55,7 +56,7 @@ int jne(int label){
 }
 
 int cmpl() {
-  fprintf(object, "\tcmpl (%%esp), %%eax\n");
+  fprintf(object, "\tcmpl %%%s, %%eax\n",last_reg_used);
 }
 
 int mklabel(int label)
@@ -64,28 +65,34 @@ int mklabel(int label)
   return label;
 }
 
-int lmovel (char const *variable) // move um int32 para o registrador
+int lmovel (char const *variable, int con_flag) // move um int32 para o registrador
 {
-  switch(reg_counter_int32){
-    case 0:
-      fprintf(object, "\tmovl\t%s(%%rip), %%eax",variable);      
-    break;
-    case 1:
-      fprintf(object, "\tmovl\t%s(%%rip), %%ebx",variable); 
-    break;
-    case 2:
-      fprintf(object, "\tmovl\t%s(%%rip), %%ecx",variable);
-    break;
-    case 3:
-      fprintf(object, "\tmovl\t%s(%%rip), %%edx",variable);
-    break;
-    default:
-      //ERROR
-    break;
-  }
-  reg_counter_int32++;
-  if(reg_counter_int32==4)
-    reg_counter_int32 = 0;
+
+    if(con_flag){
+      switch(reg_counter_int32){
+        case 0:
+          fprintf(object, "\tmovl\t%%eax,\t%s(%%rip)\n",variable);
+        break;
+        case 1:
+          fprintf(object, "\tmovl\t%%ebx,\t%s(%%rip)\n",variable);
+        break;
+        case 2:
+          fprintf(object, "\tmovl\t%%ecx,\t%s(%%rip)\n",variable);
+        break;
+        case 3:
+          fprintf(object, "\tmovl\t%%edx,\t%s(%%rip)\n",variable);
+        break;
+        default:
+          //ERROR
+        break;
+      }
+    } else {
+      fprintf(object, "\tmovl\t%%%s,\t%s(%%rip)\n",last_reg_used,variable);
+    }
+
+    reg_counter_int32++;
+    if(reg_counter_int32==4)
+      reg_counter_int32 = 0;
 
   //fprintf(object, "\tmovl %%eax,%s\n",variable); OLD
 
@@ -94,18 +101,19 @@ int lmovel (char const *variable) // move um int32 para o registrador
 
 int lmoveq (char const *variable) // move um int64 para o registrador
 {
+
   switch(reg_counter_int64){
     case 0:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rax",variable);
+      fprintf(object, "\tmovl\t%s(%%rip), %%rax\n",variable);
     break;
     case 1:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rbx",variable);
+      fprintf(object, "\tmovl\t%s(%%rip), %%rbx\n",variable);
     break;
     case 2:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rcx",variable);
+      fprintf(object, "\tmovl\t%s(%%rip), %%rcx\n",variable);
     break;
     case 3:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rdx",variable);
+      fprintf(object, "\tmovl\t%s(%%rip), %%rdx\n",variable);
     break;
     default:
       //ERROR
@@ -141,33 +149,50 @@ int lmovsd(char const *variable)  // move um float64 para o registrador
   return 0;
 }
 
-int rmovel (char const *variable) // move um valor int32bits para o registrador
+int rmovel (char const *variable, int neg_flag) // move um valor int32bits para o registrador
 {
-  /*
-  fprintf(object, "\tpushl %%eax\n");
-  fprintf(object, "\tmovl %s, %%eax\n",variable); OLD*/  
+
+  reg_counter_int32++;
+  if(reg_counter_int32==4)
+    reg_counter_int32=0;
 
   switch(reg_counter_int32){
     case 0:
-      fprintf(object, "\tmovl\t%s, %%eax",variable);      
+      if(neg_flag){
+        fprintf(object, "\tmovl\t$-%s,\t%%eax\n",variable);
+      }else{
+        fprintf(object, "\tmovl\t$%s,\t%%eax\n",variable);
+      }
+      strcpy(last_reg_used,"eax");
     break;
     case 1:
-      fprintf(object, "\tmovl\t%s, %%ebx",variable); 
+      if(neg_flag){
+        fprintf(object, "\tmovl\t$-%s,\t%%ebx\n",variable);
+      }else{
+        fprintf(object, "\tmovl\t$%s,\t%%ebx\n",variable);
+      }
+      strcpy(last_reg_used,"ebx");
     break;
     case 2:
-      fprintf(object, "\tmovl\t%s, %%ecx",variable);
+      if(neg_flag){
+        fprintf(object, "\tmovl\t$-%s,\t%%ecx\n",variable);
+      }else{
+        fprintf(object, "\tmovl\t$%s,\t%%ecx\n",variable);
+      }
+      strcpy(last_reg_used,"ecx");
     break;
     case 3:
-      fprintf(object, "\tmovl\t%s, %%edx",variable);
+      if(neg_flag){
+        fprintf(object, "\tmovl\t$-%s,\t%%edx\n",variable);
+      }else{
+        fprintf(object, "\tmovl\t$%s,\t%%edx\n",variable);
+      }
+      strcpy(last_reg_used,"edx");
     break;
     default:
       //ERROR
     break;
   }
-  reg_counter_int32++;
-  if(reg_counter_int32==4)
-    reg_counter_int32 = 0;
-
   return 0;
 }
 /*
@@ -268,31 +293,11 @@ int addlog(void)
   return 0;
 }
 
-int addint(void) //(var_left,var_right)
+int addint() //(var_left,var_right)
 {
-  fprintf(object, "\tmovl (%%rsp), %%ebx\n");
-  fprintf(object, "\tmovl %%rax, %%eax\n");  
-  fprintf(object, "\taddl %%eax, (%%esp)\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
-  /*
-  addint32
-  movl  a(%rip), %edx
-  movl  b(%rip), %eax
-  addl  %edx, %eax*/
-  /*
-  fprintf(object, "\tmovl\t%s(%%rip), %%edx\n",variavel_left);
-  fprintf(object, "\tmovl\t%s(%%rip), %%eax\n",variavel_right);
-  fprintf(object, "\taddl\t%%edx, %%eax\n", );*/
-  /*
-  addint64
-  movq  a(%rip), %rdx
-  movq  b(%rip), %rax
-  addq  %rdx, %rax
-  
-  fprintf(object, "\tmovq %s(%%rip),%%rdx\n",variavel_left);
-  fprintf(object, "\tmovq %s(%%rip),%%rax\n",variavel_right);
-  fprintf(object, "\taddq %%rdx, %%rax\n", );*/
+  if(strcmp(last_reg_used,"eax")!=0){
+    fprintf(object, "\taddl\t%%eax,\t%%%s\n",last_reg_used);
+  }
  return 0;
 }
 
@@ -339,19 +344,23 @@ int adddbl(void)
 }
 
 int subint(void)
-{
+{ /*
   fprintf(object, "\tmovl (%%rsp), %%ebx\n");
-  fprintf(object, "\tmovl %%rax, %%eax\n");  
+  fprintf(object, "\tmovl %%rax, %%eax\n");
   fprintf(object, "\tsubl %%esp,%%eax\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\taddq $8,%%rsp\n");*/
+  printf("Eu entro aqui?\n" );
+  if(strcmp(last_reg_used,"eax")!=0){
+    fprintf(object,"\tsubl\t%%eax,\t%%%s\n",last_reg_used);
+  }
   return 0;
 }
 
 int subflt(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n"); 
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tsubss %%rbp, %%xmm0\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
@@ -360,7 +369,7 @@ int subflt(void)
 int subdbl(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tsubsd %%rbp, %%xmm0\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
@@ -379,7 +388,7 @@ int mullog(void)
 int mulint(void)
 {
   fprintf(object, "\tmovl (%%rsp), %%ebx\n");
-  fprintf(object, "\tmovl %%rax, %%eax\n");  
+  fprintf(object, "\tmovl %%rax, %%eax\n");
   fprintf(object, "\timull %%esp, %%eax\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
@@ -389,7 +398,7 @@ int mulint(void)
 int mulflt(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tmulss %%rbp), %%xmm0\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
@@ -399,18 +408,18 @@ int mulflt(void)
 int muldbl(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tmulsd %%rbp, %%xmm0\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
- 
+
   return 0;
 }
 
 int divint(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tcltd\n");
   fprintf(object, "\tidivl %%rbp\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
@@ -421,7 +430,7 @@ int divint(void)
 int divflt(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tdivss %%rbp, %%xmm0;\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
@@ -431,7 +440,7 @@ int divflt(void)
 int divdbl(void)
 {
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");  
+  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tdivss %%rbp), %%xmm0;\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
   fprintf(object, "\taddq $8,%%rsp\n");
