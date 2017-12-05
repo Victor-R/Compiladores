@@ -1,19 +1,18 @@
 #include <pseudoassembly.h>
 
-/*unified label counter*/
-
+/*contador de labels*/
 int labelcounter = 1;
 
-/* auxiliary variables */
+/* variavies auxiliares */
 int mul_flag_ext = 0;
-/* contadores de registradores*/
 
+/* contadores de registradores*/
 int reg_counter_int32 = 0;
 int reg_counter_int64 = 0;
 int reg_counter_float = 0; //OK
 char last_reg_used[6];
 
-/*control pseudo instructions*/
+/*Instruções de controle*/
 
 int gofalse(int label)
 {
@@ -58,7 +57,7 @@ int jne(int label){
 }
 
 int cmpl() {
-  fprintf(object, "\tcmpl %%%s, %%eax\n",last_reg_used);
+  fprintf(object, "\tcmpl\t%%%s,\t%%eax\n",last_reg_used);
 }
 
 int mklabel(int label)
@@ -66,6 +65,8 @@ int mklabel(int label)
   fprintf(object, ".L%d\n", label);
   return label;
 }
+
+/*Move %registrador -> var(%rip)*/
 
 int lmovel (char const *variable, int con_flag) // move um int32 para o registrador
 {
@@ -254,7 +255,7 @@ int rmoveq (char const *variable, int neg_flag) // mover um valor int64bits para
         //ERROR
       break;
     }
-  }  
+  }
   reg_counter_int64++;
   if(reg_counter_int64==4)
     reg_counter_int64 = 0;
@@ -262,25 +263,26 @@ int rmoveq (char const *variable, int neg_flag) // mover um valor int64bits para
   return 0;
 }
 
-
 int rmovess(char const *variable)
 {
-  fprintf(object, "\tmovss\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  //fprintf(object, "\tmovss\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm%s\n",variable,reg_counter_float);
   reg_counter_float++;
   if(reg_counter_float==7)
     reg_counter_float = 0;
 
   return 0;
 }
-/*
+
 int rmovesd(char const *variable)
 {
-  fprintf(object, "\tmovsd %%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  //fprintf(object, "\tmovsd %%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  fprintf(object, "\tmovsd\t%s(%%rip),\t%%xmm%s\n",variable,reg_counter_float);
   if(reg_counter_float==7)
     reg_counter_float = 0;
 
   return 0;
-}*/
+}
 
 /*ULA pseudo-instructions*/
 
@@ -288,197 +290,157 @@ int rmovesd(char const *variable)
 
 int neglog(void)
 {
-  fprintf(object, "\tnot %%eax\n");
+  fprintf(object, "\tnot %%%s\n",last_reg_used);
   return 0;
 }
 
 int negint(void)
 {
-  fprintf(object, "\tnot %%eax\n");
+  fprintf(object, "\tnot %%%s\n",last_reg_used);
   return 0;
 }
 
 int negflt(void)
 {
-  fprintf(object, "\taddss %%xmm1, %%xmm0\n");
-  fprintf(object, "\tmovss %%xmm0, x(%%rip)\n");
-  fprintf(object, "\tnot %%esp\n");
+  fprintf(object, "\tnot %%xmm%s\n",reg_counter_float);
   return 0;
 }
 
-int negdbl(void)
-{
-  fprintf(object, "\taddsd %%xmm1, %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, x(%%rip)\n");
-  fprintf(object, "\tnot %%esp\n");
-  return 0;
-}
+/*Operações*/
 
-/*binary addition and inversion*/
-
-/*dbl and flt functions expects the value in the last label
-then move the value from the label to register
-then apply operation (value on register with value on top of stack)
-  int functions expects value in register then just apply operation
-*/
-
+/*Adicionais*/
 int addlog(void)
 {
   fprintf(object, "\tor %%eax, (%%esp)\n");
-  fprintf(object, "\tpopl %%eax\n");
+  //fprintf(object, "\tpopl %%eax\n");
   return 0;
 }
-
-int addint() //(var_left,var_right)
+//int32 - integer
+int addint()
 {
   if(strcmp(last_reg_used,"eax")!=0){
     fprintf(object, "\taddl\t%%eax,\t%%%s\n",last_reg_used);
   }
  return 0;
 }
-
-int addflt(void)
+//int64 - longint
+int addintq(){
+  if(strcmp(last_reg_used,"rav")!=0){
+    fprintf(object, "\taddq\t%%rax,\t%%%s\n",last_reg_used);
+  }
+}
+//float32 - real
+int addss(void)
 {
-  fprintf(object, "\tmovss (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovss %%rax, %%xmm1\n");
-  fprintf(object, "\taddss %%xmm1, %%xmm0\n");
-  fprintf(object, "\tmovss %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
-  /*
-  addflt32:
-  movss a(%rip), %xmm1
-  movss b(%rip), %xmm0
-  addss %xmm1, %xmm0
-  */
-  /*
-  fprintf(object, "\tmovss %s(%%rip), %%xmm1\n",variavel_left);
-  fprintf(object, "\tmovss %s(%%rip), %%xmm0\n",variavel_right);
-  fprintf(object, "\taddss %%xmm1, %%xmm0\n");
-  */
+  if((reg_counter_float)!=0){
+    fprintf(object, "\taddss\t%%xmm0,\t%%xmm%s\n",reg_counter_float);
+  }
+  return 0;
+}
+//float64 - double
+int adddsd(void)
+{
+  if((reg_counter_float-1)!=0){
+    fprintf(object, "\taddsd %%xmm1, %%xmm0\n",reg_counter_float-1);
+  }
   return 0;
 }
 
-int adddbl(void)
-{
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tmulsd %%rbp, %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
-  /*
-  addflt64
-  movsd a(%rip), %xmm1
-  movsd b(%rip), %xmm0
-  addsd %xmm1, %xmm0
-  */
-  /*
-  fprintf(object, "\tmovsd %s(%%rip), %%xmm1\n",variavel_left);
-  fprintf(object, "\tmovsd %s(%%rip), %%xmm0\n",variavel_right);
-  fprintf(object, "\taddsd %%xmm1, %%xmm0\n");
-  */
-  return 0;
-}
-
+/*Subtratoras*/
+//int32 - integer
 int subint(void)
-{ /*
-  fprintf(object, "\tmovl (%%rsp), %%ebx\n");
-  fprintf(object, "\tmovl %%rax, %%eax\n");
-  fprintf(object, "\tsubl %%esp,%%eax\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");*/
-  printf("Eu entro aqui?\n" );
+{
   if(strcmp(last_reg_used,"eax")!=0){
     fprintf(object,"\tsubl\t%%eax,\t%%%s\n",last_reg_used);
   }
   return 0;
 }
-
-int subflt(void)
-{
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tsubss %%rbp, %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+//int64 - longint
+int subq(void){
+  if(strcmp(last_reg_used,"rax")!=0){
+    fprintf(object,"\tsubl\t%%rax,\t%%%s\n",last_reg_used);
+  }
   return 0;
 }
-int subdbl(void)
+//float32 - real
+int subss(void)
 {
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tsubsd %%rbp, %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  if((reg_counter_float)!=0){
+    fprintf(object,"\tsubss\t%%xmm0,\t%%xmm%s\n",reg_counter_float);
+  }
+
+  return 0;
+}
+//float64 - double
+int subsd(void)
+{
+  if((reg_counter_float)!=0){
+    fprintf(object,"\tsubsd\t%%xmm0,\t%%xmm%s\n",reg_counter_float);
+  }
   return 0;
 }
 
-/*binary multiplication and inverse*/
+/*Multiplicadoras*/
 
 int mullog(void)
 {
   fprintf(object, "\tand %%eax, (%%esp)\n");
-  fprintf(object, "\tpopl %%eax\n");
   return 0;
 }
-
+//int32 - integer
 int mulint(void)
 {
-  fprintf(object, "\timull\t%%edx,\t%%eax\n");
+  fprintf(object, "\tmull\t%%edx,\t%%eax\n");
   strcpy(last_reg_used,"eax");
   return 0;
 }
-
-int mulflt(void)
+//int64 - longint
+int mulq(void)
 {
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tmulss %%rbp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\tmulq\t%%rdx,\t%%rax\n");
+  strcpy(last_reg_used,"rax");
+  return 0;
+}
+//float32 - real
+int mulss(void)
+{
+  fprintf(object, "\tmulss\t%%xmm%s,\t%%xmm%s\n",reg_counter_float,reg_counter_float-1);// precisa verificar quais xmm foram utilizados
+  strcpy(last_reg_used,"eax");
+  return 0;
+}
+//float64 - double
+int mulsd(void)
+{
+  fprintf(object, "\tmulsd\t%%xmm%s,\t%%xmm%s\n",reg_counter_float,reg_counter_float-1);
   return 0;
 }
 
-int muldbl(void)
-{
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tmulsd %%rbp, %%xmm0\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+/*Divisoras*/
 
-  return 0;
-}
-
+//int32 - integer
 int divint(void)
-{ /*
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tcltd\n");
-  fprintf(object, "\tidivl %%rbp\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");*/
+{
   fprintf(object, "\tcltd\n");
   fprintf(object, "\tidivl\t%%esi\n");
 
   return 0;
 }
-
-int divflt(void)
+//int64 - longint
+int divq(void)
 {
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tdivss %%rbp, %%xmm0;\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\tcltd\n");
+  fprintf(object, "\tidivq\t%%rsi\n");
   return 0;
 }
-
-int divdbl(void)
+//float32 - real
+int divss(void)
 {
-  fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
-  fprintf(object, "\tmovsd %%rax, %%xmm1\n");
-  fprintf(object, "\tdivss %%rbp), %%xmm0;\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\tidivss\t%%xmm1,\t%%xmm0\n");
+  return 0;
+}
+//float64 - double
+int divsd(void)
+{
+  fprintf(object, "\tidivsd\t%%xmm1,\t%%xmm0\n");
   return 0;
 }
