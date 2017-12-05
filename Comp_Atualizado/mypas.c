@@ -1,3 +1,9 @@
+/*
+        UNESP - Júlio de Mesquita Filho - Rio Claro - SP
+                  Trabalho de Compiladores
+        Alunos: Victor Henrique Ribeiro
+                Mayara Barros Ramos
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <tokens.h>

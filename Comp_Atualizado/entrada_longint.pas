@@ -1,8 +1,8 @@
-var x,y: real;
+var x,y : longint;
 
 begin
-    x := 2.11;
-    y := 2;
+    x := 2;
+    y := -2;
     while y < -1 do
       begin
         x := y;
@@ -13,7 +13,7 @@ begin
       end;
     if x > 3 then
       begin
-        x := 2 * y + 4;
+        x := 2 * y + 4;        
         y :=  7;
       end
     else

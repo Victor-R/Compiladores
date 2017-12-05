@@ -31,13 +31,13 @@ int mklabel (int label);
 /*Instruções de armazenamento*/
 /*Move %registrador -> var(%rip)*/
 int lmovel (char const *variable, int con_flag);
-int lmoveq (char const *variable);
-int lmovss (char const *variable);
-int lmovsd (char const *variable);
+int lmoveq (char const *variable, int con_flag);
+int lmovss (char const *variable, int con_flag);
+int lmovsd (char const *variable, int con_flag);
 
 /*Move $valor -> %registrador */
 int rmovel (char const *variable, int neg_flag);
-int rmoveq (char const *variable);
+int rmoveq (char const *variable, int neg_flag);
 int rmovess(char const *variable);
 int rmovesd(char const *variable);
 
@@ -62,6 +62,7 @@ int subsd(void);
 /*multiplicação e divisão*/
 int mullog(void);
 int mulint(void);
+int mulq(void);
 int mulss(void);
 int mulsd(void);
 int divint(void);

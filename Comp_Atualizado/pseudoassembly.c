@@ -16,48 +16,59 @@ char last_reg_used[6];
 
 int gofalse(int label)
 {
-  fprintf(object, "\tjz .L%d\n", label);
+  fprintf(object, "\tjz\t\t.L%d\n", label);
   return label;
 }
 
 int jump (int label)
 {
-  fprintf(object, "\tjmp .L%d\n", label);
+  fprintf(object, "\tjmp\t\t.L%d\n", label);
   return label;
 }
 
 int jle(int label){
-  fprintf(object, "\tjle .L%d\n", label);
+  fprintf(object, "\tjle\t\t.L%d\n", label);
   return 0;
 }
 
 int jlt(int label){
-  fprintf(object, "\tjlt .L%d\n", label);
+  fprintf(object, "\tjlt\t\t.L%d\n", label);
   return 0;
 }
 
 int jge(int label){
-  fprintf(object, "\tjge .L%d\n", label);
+  fprintf(object, "\tjge\t\t.L%d\n", label);
   return 0;
 }
 
 int jgt(int label){
-  fprintf(object, "\tjgt .L%d\n", label);
+  fprintf(object, "\tjgt\t\t.L%d\n", label);
   return 0;
 }
 
 int jeq(int label){
-  fprintf(object, "\tjeq .L%d\n", label);
+  fprintf(object, "\tjeq\t\t.L%d\n", label);
   return 0;
 }
 
 int jne(int label){
-  fprintf(object, "\tjne .L%d\n", label);
+  fprintf(object, "\tjne\t\t.L%d\n", label);
   return 0;
 }
 
 int cmpl() {
-  fprintf(object, "\tcmpl\t%%%s,\t%%eax\n",last_reg_used);
+  switch (last_reg_used[0]) {
+    case 'e':
+      fprintf(object, "\tcmpl\t%%%s,\t%%eax\n",last_reg_used);
+    break;
+    case 'r':
+      fprintf(object, "\tcmpq\t%%%s,\t%%rax\n",last_reg_used);
+    break;
+    case 'x':
+      fprintf(object, "\tcmpq\t%%%s,\t%%xmm0\n",last_reg_used);
+    break;
+  }
+
 }
 
 int mklabel(int label)
@@ -98,48 +109,54 @@ int lmovel (char const *variable, int con_flag) // move um int32 para o registra
   return 0;
 }
 
-int lmoveq (char const *variable) // move um int64 para o registrador
+int lmoveq (char const *variable, int con_flag) // move um int64 para o registrador
 {
-
-  switch(reg_counter_int64){
-    case 0:
-      fprintf(object, "\tmovl\t%%rax,\t%s(%%rip)\n",variable);
-    break;
-    case 1:
-      fprintf(object, "\tmovl\t%%rbx,\t%s(%%rip)\n",variable);
-    break;
-    case 2:
-      fprintf(object, "\tmovl\t%%rcx,\t%s(%%rip)\n",variable);
-    break;
-    case 3:
-      fprintf(object, "\tmovl\t%%rdx,\t%s(%%rip)\n",variable);
-    break;
-    default:
-      //ERROR
-    break;
+  if(con_flag){
+    switch(reg_counter_int64){
+      case 0:
+        fprintf(object, "\tmovq\t%%rax,\t%s(%%rip)\n",variable);
+      break;
+      case 1:
+        fprintf(object, "\tmovq\t%%rbx,\t%s(%%rip)\n",variable);
+      break;
+      case 2:
+        fprintf(object, "\tmovq\t%%rcx,\t%s(%%rip)\n",variable);
+      break;
+      case 3:
+        fprintf(object, "\tmovq\t%%rdx,\t%s(%%rip)\n",variable);
+      break;
+      default:
+        //ERROR
+      break;
+    }
+    reg_counter_int64++;
+    if(reg_counter_int64==4)
+      reg_counter_int64 = 0;
+  }else{
+    fprintf(object, "\tmovq\t%%r%cx,\t%s(%%rip)\n",last_reg_used[1],variable);
   }
-  reg_counter_int64++;
-  if(reg_counter_int64==4)
-    reg_counter_int64 = 0;
 
   return 0;
 }
 
 
-int lmovss (char const *variable)  // move um float32 para o registrador
+int lmovss (char const *variable, int con_flag)  // move um float32 para o registrador
 {
-  fprintf(object, "\tmovss\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
-  reg_counter_float++;
-  if(reg_counter_float==7)
-    reg_counter_float = 0;
-
+  if(con_flag){
+    fprintf(object, "\tmovss\t%%xmm%d, %s(%%rip)\n",reg_counter_float,variable);
+    reg_counter_float++;
+    if(reg_counter_float==7)
+      reg_counter_float = 0;
+  }else{
+    fprintf(object, "\tmovss\t%%xmm%d, %s(%%rip)\n",reg_counter_float,variable);
+  }
   return 0;
 }
 
 
-int lmovsd(char const *variable)  // move um float64 para o registrador
+int lmovsd(char const *variable, int con_flag)  // move um float64 para o registrador
 {
-  fprintf(object, "\tmovsd\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  fprintf(object, "\tmovsd\t%%xmm%d, %s(%%rip)\n",reg_counter_float,variable);
   reg_counter_float++;
   if(reg_counter_float==7)
     reg_counter_float = 0;
@@ -161,7 +178,6 @@ int rmovel (char const *variable, int neg_flag) // move um valor int32bits para 
     reg_counter_int32++;
     if(reg_counter_int32==4)
       reg_counter_int32=0;
-
     switch(reg_counter_int32){
       case 0:
         if(neg_flag){
@@ -251,8 +267,7 @@ int rmoveq (char const *variable, int neg_flag) // mover um valor int64bits para
         }
         strcpy(last_reg_used,"rdx");
       break;
-      default:
-        //ERROR
+      default:        
       break;
     }
   }
@@ -265,7 +280,6 @@ int rmoveq (char const *variable, int neg_flag) // mover um valor int64bits para
 
 int rmovess(char const *variable)
 {
-  //fprintf(object, "\tmovss\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
   fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm%s\n",variable,reg_counter_float);
   reg_counter_float++;
   if(reg_counter_float==7)
@@ -276,7 +290,6 @@ int rmovess(char const *variable)
 
 int rmovesd(char const *variable)
 {
-  //fprintf(object, "\tmovsd %%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
   fprintf(object, "\tmovsd\t%s(%%rip),\t%%xmm%s\n",variable,reg_counter_float);
   if(reg_counter_float==7)
     reg_counter_float = 0;
@@ -312,7 +325,6 @@ int negflt(void)
 int addlog(void)
 {
   fprintf(object, "\tor %%eax, (%%esp)\n");
-  //fprintf(object, "\tpopl %%eax\n");
   return 0;
 }
 //int32 - integer
@@ -333,8 +345,10 @@ int addintq(){
 int addss(void)
 {
   if((reg_counter_float)!=0){
-    fprintf(object, "\taddss\t%%xmm0,\t%%xmm%s\n",reg_counter_float);
+    fprintf(object, "\taddss\t%%xmm0,\t%%xmm%d\n",reg_counter_float);
   }
+
+
   return 0;
 }
 //float64 - double
@@ -366,7 +380,8 @@ int subq(void){
 int subss(void)
 {
   if((reg_counter_float)!=0){
-    fprintf(object,"\tsubss\t%%xmm0,\t%%xmm%s\n",reg_counter_float);
+    fprintf(object,"\tsubss\t%%xmm0,\t%%xmm%d\n",reg_counter_float);
+
   }
 
   return 0;
@@ -404,14 +419,14 @@ int mulq(void)
 //float32 - real
 int mulss(void)
 {
-  fprintf(object, "\tmulss\t%%xmm%s,\t%%xmm%s\n",reg_counter_float,reg_counter_float-1);// precisa verificar quais xmm foram utilizados
-  strcpy(last_reg_used,"eax");
+  fprintf(object, "\tmulss\t%%xmm0,\t%%xmm1\n",reg_counter_float);
+  reg_counter_float = 1;
   return 0;
 }
 //float64 - double
 int mulsd(void)
 {
-  fprintf(object, "\tmulsd\t%%xmm%s,\t%%xmm%s\n",reg_counter_float,reg_counter_float-1);
+  fprintf(object, "\tmulsd\t%%xmm%d,\t%%xmm1\n",reg_counter_float);
   return 0;
 }
 

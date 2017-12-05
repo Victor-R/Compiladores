@@ -44,7 +44,7 @@ int isID(FILE *tape)
     ungetc (lexeme[token], tape);
     lexeme[token] = 0;
 
-    token = iskeyword(lexeme);   
+    token = iskeyword(lexeme);
 
     if(token)
       return token;
@@ -143,7 +143,7 @@ EXP =  ('E'|'e') (‘+’|‘-’)? DIGIT+  */
 int isFLT(FILE *tape) {
 
   int i;
-  if (isDEC(tape)) { // begins as decimal
+  if (isDEC(tape)) {
 
     i = strlen(lexeme);
     lexeme[i] = getc(tape);
@@ -205,11 +205,13 @@ int gettoken (FILE *tokenstream)
   token = isID(tokenstream);    // Se for um Identificador retorna ID ao token
   if (token) return token;
 
+  token = isFLT(tokenstream);   // Se for um número real retorna FLT ao token
+  if (token) return token;
+  
   token = isDEC(tokenstream);  // Se for um número decimal retorna DEC ao token
   if (token) return token;
 
-  token = isFLT(tokenstream);   // Se for um número real retorna FLT ao token
-  if (token) return token;
+
 
   token = isOCT(tokenstream);   // Se for um número Octal retorna OCT ao token
   if (token) return token;

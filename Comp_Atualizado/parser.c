@@ -1,3 +1,39 @@
+/********************** Parser Recursivo LL(1) **********************
+*
+* Método: atribuir símbolos não-terminais a funções em C
+*
+* LL(1) gramática sem recursão a esquerda:
+*
+*produções com recursão a esquerda, Ex:A =>* A. Não são permitidas.
+*
+* Essas gramaticas recursivas a esquerda devem ser normalizadas,
+* retirando a recursão a esquerda.
+*
+* Ex: E -> E + T | T <- com recursão a esquerda
+*
+* E -> T R, R-> + T R | <> <- reescrito normaliazado
+*
+* Sendo assim normalizamos a linguagem da calculadora:
+*
+* smpexpr -> term rest
+*
+* rest -> addop term rest | <>
+*
+* term -> fact quoc
+*
+* quoc -> mulop fact quoc | <>
+*
+* fact -> variable | constant | ( smpexpr )
+*
+* addop -> + | -
+*
+* mulop -> * | /
+*
+* variable -> ID
+*
+* constant -> DEC | OCT | HEX | FLT
+*/
+
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,7 +56,7 @@ int	lookahead;
 
 int ERROR_COUNT = 0;
 
-
+int aux_type =0;
 
 char **nome_lista(void);
 
@@ -58,25 +94,33 @@ void var_dec(void)
   fprintf(object, "\t.text\n\t.globl\tmain\n\t.type main,\t@function\n"); // Apenas para semelhança com arquivo essays
   fprintf(object, "main:\n");
   sim_used(); // simbolos usados
+
 }
 
 //Preenche tabela de simbolos, com nome e tipo
 void declare(void)
 {
+
   if (lookahead == VAR) {
     match(VAR);
     do {
-      int type,i;
+      int type,i,type_head=0;
       // pega os nomes das variaveis declaradas para a tabela de simbolos
       char **namev = nome_lista();
       match(':');
       // pega o tipo das variaveis declaradas para a tabela de simbolos
       type =  vartype();
-
+      if(type== INTEGER || type==REAL){
+        type_head = 4;
+      }else{
+        type_head = 8;
+      }
 
       // insere os nomes e tipos das variaveis no symtab
       for(i=0; namev[i]; i++) {
+        fprintf(object, "\t.comm %s,%d,%d\n",namev[i],type_head,type_head);
         if(symtab_append(namev[i], type) == -2)
+
           fprintf(stderr,"%d: FATAL ERROR -2: no more space in symtab", semanticErrorNum());
       }
       match(';');
@@ -92,7 +136,6 @@ char **nome_lista(void)
 
   _nome_lista_start:
   strcpy(symbolvec[i] = malloc(sizeof lexeme +1), lexeme); i++;
-  fprintf(object, "\t.comm %s\n",lexeme);
   match(ID);
   while(lookahead == ',') {
     match(',');
@@ -144,6 +187,15 @@ void stmtlist(void)
   }
 }
 
+/*ifelse:
+  (condição)
+  Se falso jump .L1
+  stmt
+  jump .l2
+  .L1
+  stmt(else)
+  .L2
+*/
 void if_stmt(void)
 {
   int _endif, _else;
@@ -163,6 +215,14 @@ void if_stmt(void)
   mklabel(_endif);
 }
 
+/*while:
+  .L1
+  (condição)
+  se falso jump .L2
+    stmt
+  jump .L1
+  .L2
+*/
 void while_stmt(void)
 {
   int while_head, while_tail;
@@ -191,6 +251,14 @@ void blockstart(void)
   match(END);
 }
 
+/*repeat:
+  .L1
+    stmt
+  (condição)
+  se falso jump .L2
+  jump .L1
+  .L2
+*/
 void repeat_stmt(void)
 {
   int repeat_head=0,repeat_tail=0;
@@ -231,6 +299,7 @@ void repeat_stmt(void)
      case LONGINT:
         switch(rtype){
           case INTEGER:
+          case LONGINT:
             return ltype;
         }
      break;
@@ -296,10 +365,13 @@ int smpexpr(int inherited_type)
 	lvalue_seen = 0,         // flag é 1 quando LVALUE
 	acctype = inherited_type,// acumulador de tipo
 	syntype,                 // tipo de simbolo declarado em symtab
+  constype,
 	ltype,           // syntype para verificação futura
 	rtype,
   neg_flag = 0,    // tipo atualizado (pode ser promovido)
   con_flag = 0;
+  float lexval;
+  char *fltIEEE;
 
   if(lookahead == '-'){
     neg_flag = 1;
@@ -316,6 +388,7 @@ int smpexpr(int inherited_type)
     }
     acctype = BOOLEAN;
   }
+  //printf("ltype:%d rtype:%d INT:%d REAL:%d\n",ltype,rtype,INTEGER,REAL);
 
   T_entry:
   F_entry:
@@ -333,6 +406,7 @@ int smpexpr(int inherited_type)
       	if (acctype == 0){
       	  acctype = syntype;
       	}
+        aux_type = syntype;
         match(ID);
         if (lookahead == ASGN) {
     		  lvalue_seen = 1;
@@ -361,6 +435,11 @@ int smpexpr(int inherited_type)
                   symtab_stream + symtab[varlocality][0]);
                   strcpy(last_reg_used,"rdx");
                 break;
+                case REAL:
+                  fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm1\n",
+                  symtab_stream + symtab[varlocality][0]);
+                  //strcpy(last_reg_used,"xmm1");
+                break;
                 default:
                   fprintf(object, "--\n");
                 break;
@@ -375,22 +454,59 @@ int smpexpr(int inherited_type)
                   fprintf(object, "\tmovl\t%s(%%rip),\t%%rsi\n",
                   symtab_stream + symtab[varlocality][0]);
                 break;
+                case REAL:
+                  fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm1\n",
+                  symtab_stream + symtab[varlocality][0]);
+                  //strcpy(last_reg_used,"xmm1");
+                break;
                 default:
                   fprintf(object, "--\n");
                 break;
               }
             }
-          }else{ //Quando for um store comum
+          }else if(add_flag=='+' || add_flag == '-'){
+            switch (syntype) {
+              case INTEGER:
+                fprintf(object, "\tmovl\t%s(%%rip),\t%%ebx\n",
+                symtab_stream + symtab[varlocality][0]);
+                strcpy(last_reg_used,"ebx");
+                reg_counter_int32++;
+              break;
+              case LONGINT:
+                fprintf(object, "\tmovq\t%s(%%rip),\t%%rbx\n",
+                symtab_stream + symtab[varlocality][0]);
+                strcpy(last_reg_used,"rbx");
+                reg_counter_int64++;
+              break;
+              case REAL:
+                fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm1\n",
+                symtab_stream + symtab[varlocality][0]);
+                strcpy(last_reg_used,"xmm1");
+                reg_counter_float++;
+              break;
+              default:
+                fprintf(object, "--\n");
+              break;
+            }
+          }else{
             switch (syntype) {
               case INTEGER:
                 fprintf(object, "\tmovl\t%s(%%rip),\t%%eax\n",
                 symtab_stream + symtab[varlocality][0]);
                 strcpy(last_reg_used,"eax");
+                reg_counter_int32++;
               break;
               case LONGINT:
                 fprintf(object, "\tmovq\t%s(%%rip),\t%%rax\n",
                 symtab_stream + symtab[varlocality][0]);
                 strcpy(last_reg_used,"rax");
+                reg_counter_int64++;
+              break;
+              case REAL:
+                fprintf(object, "\tmovss\t%s(%%rip),\t%%xmm0\n",
+                symtab_stream + symtab[varlocality][0]);
+                strcpy(last_reg_used,"xmm0");
+                reg_counter_float++;
               break;
               default:
                 fprintf(object, "--\n");
@@ -402,13 +518,15 @@ int smpexpr(int inherited_type)
       break;
 
       case FLTCONST:
-        {
-          float lexval = atof(lexeme);
+          lexval = 0;
+          lexval = atof(lexeme);
           char *fltIEEE = malloc(sizeof(lexeme) + 1);
           sprintf(fltIEEE, "$%i", ((int *)&lexval) );
           //rmovel(fltIEEE); OLD
           rmovess(fltIEEE);
-        }
+
+
+
         match(FLTCONST);
       	syntype = REAL;
       	if (acctype > BOOLEAN || acctype == 0) {
@@ -446,7 +564,6 @@ int smpexpr(int inherited_type)
         match('(');
 	      syntype = expr(0);
 
-
 	      if(type_check(syntype, acctype)) {
 	         acctype = max(acctype,syntype);
 	      } else {
@@ -460,10 +577,21 @@ int smpexpr(int inherited_type)
     if(mul_flag){
        if (mul_flag=='*'){
           mul_flag_ext = 1;
-         mulint();
+         switch (syntype) {
+           case INTEGER: mulint(); break;
+           case LONGINT: mulq(); break;
+           case REAL: mulss(); break;
+         }
+
+
        }else if (mul_flag=='/'){
           mul_flag_ext = 2;
-         divint();
+
+          switch (syntype) {
+            case INTEGER: divint(); break;
+            case LONGINT: divq(); break;
+            case REAL: divss(); break;
+          }
        }
     }
 
@@ -472,9 +600,19 @@ int smpexpr(int inherited_type)
 
     if(add_flag){
       if(add_flag=='+'){
-        addint();
+        switch (acctype) {
+          case INTEGER: addint(); break;
+          case LONGINT: addintq(); break;
+          case REAL: addss(); break;
+        }
+
       }else if (add_flag=='-'){
-        subint();
+        switch (acctype) {
+          case INTEGER: subint(); break;
+          case LONGINT: subq(); break;
+          case REAL: subss(); break;
+        }
+
       }
        //printf("Eu entrei no if(add_flag)\n" );
     }
@@ -492,15 +630,18 @@ int smpexpr(int inherited_type)
         break;
 
         case LONGINT:
-          lmoveq(symtab_stream + symtab[varlocality][0]);
+          lmoveq(symtab_stream + symtab[varlocality][0],con_flag);
+          con_flag = 0;
         break;
 
         case REAL:
-          lmovss(symtab_stream + symtab[varlocality][0]);
+          lmovss(symtab_stream + symtab[varlocality][0],con_flag);
+          con_flag = 0;
         break;
 
         case DOUBLE:
-          lmovsd(symtab_stream + symtab[varlocality][0]);
+          lmovsd(symtab_stream + symtab[varlocality][0],con_flag);
+          con_flag = 0;
         break;
 
         default://BOOLEAN
@@ -592,11 +733,19 @@ int addop (void)
 	switch(lookahead){
 	case '+':
 			match('+');
-			/**/addint();/**/
+        switch (aux_type) {
+          case INTEGER: addint(); break;
+          case LONGINT: addintq(); break;
+          case REAL: addss(); break;
+        }
 			return '+';
 	case '-':
 			match('-');
-			/**/subint();/**/
+        switch (aux_type) {
+          case INTEGER: subint(); break;
+          case LONGINT: subq(); break;
+          case REAL: subss(); break;
+        }
 			return '-';
 	case OR:
       match(OR);
@@ -613,11 +762,22 @@ int mulop (void)
 {
 	switch(lookahead){
 	case '*':
-			match('*'); return '*';
-			/**/mulint();/**/
+			match('*');
+      switch (aux_type) {
+        case INTEGER: mulint(); break;
+        case LONGINT: mulq(); break;
+        case REAL: mulss(); break;
+      }
+      return '*';
+			/**//**/
 	case '/':
-			match('/'); return '/';
-			/**/divint();/**/
+			match('/');
+      switch (aux_type) {
+        case INTEGER: divint(); break;
+        case LONGINT: divq(); break;
+        case REAL: divss(); break;
+      }
+      return '/';
 	case AND:
       match(AND);
       /**/addlog();/**/
