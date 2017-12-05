@@ -1,6 +1,10 @@
 /**@<pseudoassembly.h>::**/
 #include <mypas.h>
 #include <string.h>
+
+/* auxiliary variables */
+extern int mul_flag_ext;
+
 /*unified label counter*/
 
 extern int labelcounter;

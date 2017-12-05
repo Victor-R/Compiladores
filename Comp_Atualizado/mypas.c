@@ -57,6 +57,7 @@ int main (int argc, char *argv[], char *envp[])
       exit (PARAMETERS_SURPLUS);
     }
   }
+  fprintf(object, "\t.file ""%s""\n",argv[1]);
   mypas();
   //print_symtab_stream(); //this is a function for debug purposes, prints the entire symtab_stream
   printf("\n");

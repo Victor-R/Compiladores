@@ -5,9 +5,8 @@ begin
   while y < -1 do
     begin
     x := y;
-    x := x + 45;
-    y := y + 1;
-    x := x - 1;
+    x := x / y;
+    x := x / 2;
     end;
   if x > 3 then
     begin

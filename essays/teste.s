@@ -19,13 +19,15 @@ main:
 	movl	y, %eax
 	movl	%eax, x
 	movl	x, %eax
-	addl	$45, %eax
+	movl	y, %ecx
+	cltd
+	idivl	%ecx
 	movl	%eax, x
-	movl	y, %eax
-	addl	$1, %eax
-	movl	%eax, y
 	movl	x, %eax
-	subl	$1, %eax
+	movl	%eax, %edx
+	shrl	$31, %edx
+	addl	%edx, %eax
+	sarl	%eax
 	movl	%eax, x
 .L2:
 	movl	y, %eax

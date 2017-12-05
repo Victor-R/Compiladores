@@ -4,6 +4,8 @@
 
 int labelcounter = 1;
 
+/* auxiliary variables */
+int mul_flag_ext = 0;
 /* contadores de registradores*/
 
 int reg_counter_int32 = 0;
@@ -67,7 +69,6 @@ int mklabel(int label)
 
 int lmovel (char const *variable, int con_flag) // move um int32 para o registrador
 {
-
     if(con_flag){
       switch(reg_counter_int32){
         case 0:
@@ -89,12 +90,9 @@ int lmovel (char const *variable, int con_flag) // move um int32 para o registra
     } else {
       fprintf(object, "\tmovl\t%%%s,\t%s(%%rip)\n",last_reg_used,variable);
     }
-
     reg_counter_int32++;
     if(reg_counter_int32==4)
       reg_counter_int32 = 0;
-
-  //fprintf(object, "\tmovl %%eax,%s\n",variable); OLD
 
   return 0;
 }
@@ -104,16 +102,16 @@ int lmoveq (char const *variable) // move um int64 para o registrador
 
   switch(reg_counter_int64){
     case 0:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rax\n",variable);
+      fprintf(object, "\tmovl\t%%rax,\t%s(%%rip)\n",variable);
     break;
     case 1:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rbx\n",variable);
+      fprintf(object, "\tmovl\t%%rbx,\t%s(%%rip)\n",variable);
     break;
     case 2:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rcx\n",variable);
+      fprintf(object, "\tmovl\t%%rcx,\t%s(%%rip)\n",variable);
     break;
     case 3:
-      fprintf(object, "\tmovl\t%s(%%rip), %%rdx\n",variable);
+      fprintf(object, "\tmovl\t%%rdx,\t%s(%%rip)\n",variable);
     break;
     default:
       //ERROR
@@ -123,8 +121,6 @@ int lmoveq (char const *variable) // move um int64 para o registrador
   if(reg_counter_int64==4)
     reg_counter_int64 = 0;
 
-  //fprintf(object, "\tmovq %%rax,%s\n",variable); OLD
-  //fprintf(object, "\tmovq a(%rip), %rax",value,variable);
   return 0;
 }
 
@@ -143,6 +139,7 @@ int lmovss (char const *variable)  // move um float32 para o registrador
 int lmovsd(char const *variable)  // move um float64 para o registrador
 {
   fprintf(object, "\tmovsd\t%%xmm%s, %s(%%rip)\n",reg_counter_float,variable);
+  reg_counter_float++;
   if(reg_counter_float==7)
     reg_counter_float = 0;
 
@@ -151,47 +148,56 @@ int lmovsd(char const *variable)  // move um float64 para o registrador
 
 int rmovel (char const *variable, int neg_flag) // move um valor int32bits para o registrador
 {
+  if(mul_flag_ext==1){
+    fprintf(object, "\tmovl\t$%s,\t%%edx\n",variable);
+    strcpy(last_reg_used,"edx");
+    mul_flag_ext = 0;
+  }else if (mul_flag_ext==2){
+    fprintf(object, "\tmovl\t$%s,\t%%esi\n",variable);
+    strcpy(last_reg_used,"eax");
+    mul_flag_ext = 0;
+  }else{
+    reg_counter_int32++;
+    if(reg_counter_int32==4)
+      reg_counter_int32=0;
 
-  reg_counter_int32++;
-  if(reg_counter_int32==4)
-    reg_counter_int32=0;
-
-  switch(reg_counter_int32){
-    case 0:
-      if(neg_flag){
-        fprintf(object, "\tmovl\t$-%s,\t%%eax\n",variable);
-      }else{
-        fprintf(object, "\tmovl\t$%s,\t%%eax\n",variable);
-      }
-      strcpy(last_reg_used,"eax");
-    break;
-    case 1:
-      if(neg_flag){
-        fprintf(object, "\tmovl\t$-%s,\t%%ebx\n",variable);
-      }else{
-        fprintf(object, "\tmovl\t$%s,\t%%ebx\n",variable);
-      }
-      strcpy(last_reg_used,"ebx");
-    break;
-    case 2:
-      if(neg_flag){
-        fprintf(object, "\tmovl\t$-%s,\t%%ecx\n",variable);
-      }else{
-        fprintf(object, "\tmovl\t$%s,\t%%ecx\n",variable);
-      }
-      strcpy(last_reg_used,"ecx");
-    break;
-    case 3:
-      if(neg_flag){
-        fprintf(object, "\tmovl\t$-%s,\t%%edx\n",variable);
-      }else{
-        fprintf(object, "\tmovl\t$%s,\t%%edx\n",variable);
-      }
-      strcpy(last_reg_used,"edx");
-    break;
-    default:
-      //ERROR
-    break;
+    switch(reg_counter_int32){
+      case 0:
+        if(neg_flag){
+          fprintf(object, "\tmovl\t$-%s,\t%%eax\n",variable);
+        }else{
+          fprintf(object, "\tmovl\t$%s,\t%%eax\n",variable);
+        }
+        strcpy(last_reg_used,"eax");
+      break;
+      case 1:
+        if(neg_flag){
+          fprintf(object, "\tmovl\t$-%s,\t%%ebx\n",variable);
+        }else{
+          fprintf(object, "\tmovl\t$%s,\t%%ebx\n",variable);
+        }
+        strcpy(last_reg_used,"ebx");
+      break;
+      case 2:
+        if(neg_flag){
+          fprintf(object, "\tmovl\t$-%s,\t%%ecx\n",variable);
+        }else{
+          fprintf(object, "\tmovl\t$%s,\t%%ecx\n",variable);
+        }
+        strcpy(last_reg_used,"ecx");
+      break;
+      case 3:
+        if(neg_flag){
+          fprintf(object, "\tmovl\t$-%s,\t%%edx\n",variable);
+        }else{
+          fprintf(object, "\tmovl\t$%s,\t%%edx\n",variable);
+        }
+        strcpy(last_reg_used,"edx");
+      break;
+      default:
+        //ERROR
+      break;
+    }
   }
   return 0;
 }
@@ -387,11 +393,8 @@ int mullog(void)
 
 int mulint(void)
 {
-  fprintf(object, "\tmovl (%%rsp), %%ebx\n");
-  fprintf(object, "\tmovl %%rax, %%eax\n");
-  fprintf(object, "\timull %%esp, %%eax\n");
-  fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\timull\t%%edx,\t%%eax\n");
+  strcpy(last_reg_used,"eax");
   return 0;
 }
 
@@ -417,13 +420,16 @@ int muldbl(void)
 }
 
 int divint(void)
-{
+{ /*
   fprintf(object, "\tmovsd (%%rsp), %%xmm0\n");
   fprintf(object, "\tmovsd %%rax, %%xmm1\n");
   fprintf(object, "\tcltd\n");
   fprintf(object, "\tidivl %%rbp\n");
   fprintf(object, "\tmovsd %%xmm0, %%rax\n");
-  fprintf(object, "\taddq $8,%%rsp\n");
+  fprintf(object, "\taddq $8,%%rsp\n");*/
+  fprintf(object, "\tcltd\n");
+  fprintf(object, "\tidivl\t%%esi\n");
+
   return 0;
 }
 

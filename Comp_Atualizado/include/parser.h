@@ -30,6 +30,8 @@ void repeat_stmt(void);
 
 extern int lookahead;
 
+
+
 extern int gettoken (FILE *);
 
 void match (int expected_token);

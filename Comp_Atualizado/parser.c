@@ -20,6 +20,8 @@ int	lookahead;
 
 int ERROR_COUNT = 0;
 
+
+
 char **nome_lista(void);
 
 int semanticErrorNum()
@@ -53,6 +55,7 @@ void mypas(void)
 void var_dec(void)
 {
   declare(); // simbolos declarados
+  fprintf(object, "main:\n");
   sim_used(); // simbolos usados
 }
 
@@ -88,6 +91,7 @@ char **nome_lista(void)
 
   _nome_lista_start:
   strcpy(symbolvec[i] = malloc(sizeof lexeme +1), lexeme); i++;
+  fprintf(object, "\t.comm %s\n",lexeme);
   match(ID);
   while(lookahead == ',') {
     match(',');
@@ -343,9 +347,22 @@ int smpexpr(int inherited_type)
     	      acctype = -1;
     	    }
   	    }else if(varlocality > -1) {
+          if(mul_flag){
+            if(mul_flag=='*'){
+              fprintf(object, "\tmovl\t%s(%%rip),\t%%edx\n",
+              symtab_stream + symtab[varlocality][0]);
+              strcpy(last_reg_used,"edx");
+            }else if(mul_flag=='/'){
+              fprintf(object, "\tmovl\t%s(%%rip),\t%%esi\n",
+              symtab_stream + symtab[varlocality][0]);
+              //strcpy(last_reg_used,"esi");
+            }
+
+          }else{
             fprintf(object, "\tmovl\t%s(%%rip),\t%%eax\n",
             symtab_stream + symtab[varlocality][0]);
             strcpy(last_reg_used,"eax");
+          }
         }
 
       break;
@@ -368,7 +385,7 @@ int smpexpr(int inherited_type)
 
       case INTCONST:
         con_flag = 1;
-        if(neg_flag){
+        if(neg_flag){          
           rmovel((char*)(lexeme),neg_flag);
           neg_flag = 0;
         }else{
@@ -399,7 +416,13 @@ int smpexpr(int inherited_type)
     }
 
     if(mul_flag){
-       mulint();
+       if (mul_flag=='*'){
+          mul_flag_ext = 1;
+         mulint();
+       }else if (mul_flag=='/'){
+          mul_flag_ext = 2;
+         divint();
+       }
     }
 
     if(mul_flag = mulop())
@@ -420,20 +443,6 @@ int smpexpr(int inherited_type)
 
     if(lvalue_seen && varlocality > -1) {
       switch(ltype) {
-        // verifica que tipo de instruções vão ser trabalhadas
-        /*
-        case INTEGER:
-        case REAL:
-        case BOOLEAN:
-          //lmovel(symtab_stream + symtab[varlocality][0]); // 32-bit
-          break;
-
-        case DOUBLE:
-          //lmoveq(symtab_stream + symtab[varlocality][0]); // 64-bit
-          break;
-
-        default: //case  BOOLEAN
-          break;*/
 
         case INTEGER:
           lmovel(symtab_stream + symtab[varlocality][0],con_flag);
@@ -495,48 +504,6 @@ int expr(int inherited_type)
   return -1;
 }
 
- void calculate(int operator){
-	switch(operator){
-		case '+':
-			printf("\tacc= acc + stack[sp]; sp--;\n");
-		break;
-		case '-':
-			printf("\tacc= acc - stack[sp]; sp--;\n");
-		break;
-		case '*':
-			printf("\tacc= acc * stack[sp]; sp--;\n");
-		break;
-		case '/':
-			printf("\tacc= acc / stack[sp]; sp--;\n");
-		break;
-	}
-}
-
- int
- isoplus(int oplus){
-	switch (oplus) {
-			case '+':
-				/*6*/printf("\tacc = acc + stack[sp]; sp--;\n")/*6*/;
-				return '+';
-			case '-':
-				/*7*/printf("\tacc = acc - stack[sp]; sp--;\n")/*7*/;
-				return '-';
-	}
-	return 0;
-}
-int isotimes(int otimes){
-	switch (otimes) {
-			case '*':
-				/*6*/printf("\tacc = acc * stack[sp]; sp--;\n")/*6*/;
-				return '*';
-			case '/':
-				/*7*/printf("\tacc = acc / stack[sp]; sp--;\n")/*7*/;
-				return '/';
-	}
-	return 0;
-}
-
-
 void stmt(void){
 	switch (lookahead) {
     case BEGIN:
@@ -571,7 +538,6 @@ void stmt(void){
   }
 }
 
-
 void command(void){
 	while (lookahead != EOF){
 	stmt();
@@ -583,9 +549,6 @@ int addop (void)
 {
 	switch(lookahead){
 	case '+':
-      // TEMOS 4 SITUAÇÕES ID+ID|VALUE+ID|ID+VALUE|VALUE+VALUE
-      // PRECISO TRAZER O VALOR DA ESQUERDA, POIS O QUE ESTÁ NO LOOKAHEAD É '+'
-
 			match('+');
 			/**/addint();/**/
 			return '+';
