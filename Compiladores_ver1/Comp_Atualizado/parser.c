@@ -110,7 +110,7 @@ int vartype(void)
       return INTEGER;
 
     case LONGINT:
-      match(LONGINT);
+      match(LONGINT); //  NEW
       return LONGINT;
 
     case REAL:
@@ -118,7 +118,7 @@ int vartype(void)
       return REAL;
 
     case DOUBLE:
-      match(DOUBLE);
+      match(DOUBLE);    //NEW?
       return DOUBLE;
 
     default:
@@ -349,53 +349,20 @@ int smpexpr(int inherited_type)
     	    }
   	    }else if(varlocality > -1) {
           if(mul_flag){
-            if(mul_flag=='*'){  // Quando for multiplicação
-              switch (syntype) {
-                case INTEGER:
-                  fprintf(object, "\tmovl\t%s(%%rip),\t%%edx\n",
-                  symtab_stream + symtab[varlocality][0]);
-                  strcpy(last_reg_used,"edx");
-                break;
-                case LONGINT:
-                  fprintf(object, "\tmovq\t%s(%%rip),\t%%rdx\n",
-                  symtab_stream + symtab[varlocality][0]);
-                  strcpy(last_reg_used,"rdx");
-                break;
-                default:
-                  fprintf(object, "--\n");
-                break;
-              }
-            }else if(mul_flag=='/'){ //Quando for divisão
-              switch (syntype) {
-                case INTEGER:
-                  fprintf(object, "\tmovl\t%s(%%rip),\t%%esi\n",
-                  symtab_stream + symtab[varlocality][0]);
-                break;
-                case LONGINT:
-                  fprintf(object, "\tmovl\t%s(%%rip),\t%%rsi\n",
-                  symtab_stream + symtab[varlocality][0]);
-                break;
-                default:
-                  fprintf(object, "--\n");
-                break;
-              }
+            if(mul_flag=='*'){
+              fprintf(object, "\tmovl\t%s(%%rip),\t%%edx\n",
+              symtab_stream + symtab[varlocality][0]);
+              strcpy(last_reg_used,"edx");
+            }else if(mul_flag=='/'){
+              fprintf(object, "\tmovl\t%s(%%rip),\t%%esi\n",
+              symtab_stream + symtab[varlocality][0]);
+              //strcpy(last_reg_used,"esi");
             }
-          }else{ //Quando for um store comum
-            switch (syntype) {
-              case INTEGER:
-                fprintf(object, "\tmovl\t%s(%%rip),\t%%eax\n",
-                symtab_stream + symtab[varlocality][0]);
-                strcpy(last_reg_used,"eax");
-              break;
-              case LONGINT:
-                fprintf(object, "\tmovq\t%s(%%rip),\t%%rax\n",
-                symtab_stream + symtab[varlocality][0]);
-                strcpy(last_reg_used,"rax");
-              break;
-              default:
-                fprintf(object, "--\n");
-              break;
-            }
+
+          }else{
+            fprintf(object, "\tmovl\t%s(%%rip),\t%%eax\n",
+            symtab_stream + symtab[varlocality][0]);
+            strcpy(last_reg_used,"eax");
           }
         }
 
@@ -420,18 +387,10 @@ int smpexpr(int inherited_type)
       case INTCONST:
         con_flag = 1;
         if(neg_flag){
-          if(acctype==LONGINT){
-            rmoveq((char*)(lexeme),neg_flag);
-          }else{
-            rmovel((char*)(lexeme),neg_flag);
-          }
+          rmovel((char*)(lexeme),neg_flag);
           neg_flag = 0;
         }else{
-          if(acctype==LONGINT){
-            rmoveq((char*)(lexeme),neg_flag);
-          }else{
-            rmovel((char*)(lexeme),neg_flag);
-          }
+          rmovel((char*)lexeme,neg_flag);
         }
 
         match(INTCONST);

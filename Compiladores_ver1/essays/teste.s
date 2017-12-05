@@ -18,12 +18,16 @@ main:
 .L3:
 	movl	y, %eax
 	movl	%eax, x
-	movl	x, %edx
-	movl	y, %eax
-	addl	%edx, %eax
+	movl	x, %eax
+	movl	y, %ecx
+	cltd
+	idivl	%ecx
 	movl	%eax, x
 	movl	x, %eax
-	addl	$2, %eax
+	movl	%eax, %edx
+	shrl	$31, %edx
+	addl	%edx, %eax
+	sarl	%eax
 	movl	%eax, x
 .L2:
 	movl	y, %eax

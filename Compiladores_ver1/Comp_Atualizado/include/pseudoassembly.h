@@ -35,7 +35,7 @@ int lmovss (char const *variable);
 int lmovsd (char const *variable);
 
 int rmovel (char const *variable, int neg_flag);
-int rmoveq (char const *variable, int neg_flag);
+//int rmoveq (char const *variable);
 int rmovess(char const *variable);
 //int rmovesd(char const *variable);
 

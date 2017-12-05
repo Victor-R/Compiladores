@@ -201,67 +201,37 @@ int rmovel (char const *variable, int neg_flag) // move um valor int32bits para 
   }
   return 0;
 }
-
-int rmoveq (char const *variable, int neg_flag) // mover um valor int64bits para o registrador
+/*
+int rmoveq (char const *variable) // mover um valor int64bits para o registrador
 {
-  if(mul_flag_ext==1){
-    fprintf(object, "\tmovq\t$%s,\t%%rdx\n",variable);
-    strcpy(last_reg_used,"rdx");
-    mul_flag_ext = 0;
-  }else if (mul_flag_ext==2){
-    fprintf(object, "\tmovq\t$%s,\t%%rsi\n",variable);
-    strcpy(last_reg_used,"rax");
-    mul_flag_ext = 0;
-  }else{
-    reg_counter_int64++;
-    if(reg_counter_int64==4)
-      reg_counter_int64=0;
+  /*
+  fprintf(object, "\tpushl %%rax\n");
+  fprintf(object, "\tmovq %s, %%rax\n",variable); OLD
 
-    switch(reg_counter_int64){
-      case 0:
-        if(neg_flag){
-          fprintf(object, "\tmovq\t$-%s,\t%%rax\n",variable);
-        }else{
-          fprintf(object, "\tmovq\t$%s,\t%%rax\n",variable);
-        }
-        strcpy(last_reg_used,"rax");
-      break;
-      case 1:
-        if(neg_flag){
-          fprintf(object, "\tmovq\t$-%s,\t%%rbx\n",variable);
-        }else{
-          fprintf(object, "\tmovq\t$%s,\t%%rbx\n",variable);
-        }
-        strcpy(last_reg_used,"rbx");
-      break;
-      case 2:
-        if(neg_flag){
-          fprintf(object, "\tmovq\t$-%s,\t%%rcx\n",variable);
-        }else{
-          fprintf(object, "\tmovq\t$%s,\t%%rcx\n",variable);
-        }
-        strcpy(last_reg_used,"rcx");
-      break;
-      case 3:
-        if(neg_flag){
-          fprintf(object, "\tmovq\t$-%s,\t%%rdx\n",variable);
-        }else{
-          fprintf(object, "\tmovq\t$%s,\t%%rdx\n",variable);
-        }
-        strcpy(last_reg_used,"rdx");
-      break;
-      default:
-        //ERROR
-      break;
-    }
-  }  
+  switch(reg_counter_int64){
+    case 0:
+      fprintf(object, "\tmovl %s, %%rax",variable);
+    break;
+    case 1:
+      fprintf(object, "\tmovl %s, %%rbx",variable);
+    break;
+    case 2:
+      fprintf(object, "\tmovl %s, %%rcx",variable);
+    break;
+    case 3:
+      fprintf(object, "\tmovl %s, %%rdx",variable);
+    break;
+    default:
+      //ERROR
+    break;
+  }
   reg_counter_int64++;
   if(reg_counter_int64==4)
     reg_counter_int64 = 0;
 
   return 0;
 }
-
+*/
 
 int rmovess(char const *variable)
 {

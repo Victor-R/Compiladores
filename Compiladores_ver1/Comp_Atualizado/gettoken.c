@@ -6,7 +6,7 @@
 #include <keywords.h>
 #include <gettoken.h>
 
-// Pula os espaços vazios da fita
+// Pula os espaços vazios da fita 
 void skipspaces (FILE *tape)
 {
   int head;
@@ -44,8 +44,7 @@ int isID(FILE *tape)
     ungetc (lexeme[token], tape);
     lexeme[token] = 0;
 
-    token = iskeyword(lexeme);   
-
+    token = iskeyword(lexeme);
     if(token)
       return token;
 
@@ -205,7 +204,7 @@ int gettoken (FILE *tokenstream)
   token = isID(tokenstream);    // Se for um Identificador retorna ID ao token
   if (token) return token;
 
-  token = isDEC(tokenstream);  // Se for um número decimal retorna DEC ao token
+  token = isDEC (tokenstream);  // Se for um número decimal retorna DEC ao token
   if (token) return token;
 
   token = isFLT(tokenstream);   // Se for um número real retorna FLT ao token
@@ -214,9 +213,9 @@ int gettoken (FILE *tokenstream)
   token = isOCT(tokenstream);   // Se for um número Octal retorna OCT ao token
   if (token) return token;
 
-  token = isHEX(tokenstream);  // Se for um número Hexadecimal retorna HEX ao token
+  token = isHEX (tokenstream);  // Se for um número Hexadecimal retorna HEX ao token
   if (token) return token;
 
-  token = getc(tokenstream);   // Se não atender a nenhuma das anteriores retorna um char. Ex: ',' , ';'
+  token = getc (tokenstream);   // Se não atender a nenhuma das anteriores retorna um char. Ex: ',' , ';'
   return token;
 }
