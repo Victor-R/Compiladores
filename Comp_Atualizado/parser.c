@@ -55,6 +55,7 @@ void mypas(void)
 void var_dec(void)
 {
   declare(); // simbolos declarados
+  fprintf(object, "\t.text\n\t.globl\tmain\n\t.type main,\t@function\n"); // Apenas para semelhança com arquivo essays
   fprintf(object, "main:\n");
   sim_used(); // simbolos usados
 }
@@ -385,7 +386,7 @@ int smpexpr(int inherited_type)
 
       case INTCONST:
         con_flag = 1;
-        if(neg_flag){          
+        if(neg_flag){
           rmovel((char*)(lexeme),neg_flag);
           neg_flag = 0;
         }else{

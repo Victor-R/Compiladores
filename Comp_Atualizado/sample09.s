@@ -1,4 +1,4 @@
-	.file sample09.pas
+	.file "sample09.pas"
 	.comm a
 	.comm b
 	.comm c

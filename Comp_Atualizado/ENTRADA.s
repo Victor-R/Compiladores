@@ -1,6 +1,9 @@
-	.file ENTRADA.pas
+	.file "ENTRADA.pas"
 	.comm x
 	.comm y
+	.text
+	.globl	main
+	.type main,	@function
 main:
 	movl	$2,	%ebx
 	movl	%ebx,	x(%rip)
