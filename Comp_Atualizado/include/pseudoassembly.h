@@ -1,23 +1,22 @@
-/**@<pseudoassembly.h>::**/
+
 #include <mypas.h>
 #include <string.h>
 
-/* auxiliary variables */
+/* variavies auxiliares */
 extern int mul_flag_ext;
 
-/*unified label counter*/
+/*contador de labels*/
 
 extern int labelcounter;
 
-/* contadores de registradores*/
+/*contadores de registradores*/
 extern int reg_counter_int32;
 extern int reg_counter_int64;
 extern int reg_counter_float;
 extern char last_reg_used[6];
 
-//char *reg_return(void);
-/*control pseudo instructions*/
 
+/*Instruções de controle*/
 int gofalse(int label);
 int jump (int label);
 int jle(int label);
@@ -29,40 +28,44 @@ int jne(int label);
 int cmpl();
 int mklabel (int label);
 
+
+/*Instruções de armazenamento*/
+/*Move %registrador -> var(%rip)*/
 int lmovel (char const *variable, int con_flag);
 int lmoveq (char const *variable);
 int lmovss (char const *variable);
 int lmovsd (char const *variable);
 
+/*Move $valor -> %registrador */
 int rmovel (char const *variable, int neg_flag);
-//int rmoveq (char const *variable);
+int rmoveq (char const *variable);
 int rmovess(char const *variable);
-//int rmovesd(char const *variable);
+int rmovesd(char const *variable);
 
 /*ULA pseudo-instructions*/
 
-/*unary*/
+/*Negação*/
 int neglog(void);
 int negint(void);
 int negflt(void);
-int negdbl(void);
 
-/*binary addition and inversion*/
+/*adição e subtração*/
 int addlog(void);
 int addint(void);
-int addflt(void);
-int adddbl(void);
+int addintq(void);
+int addss(void);
+int adddsd(void);
 int subint(void);
-int subflt(void);
-int subdbl(void);
+int subq(void);
+int subss(void);
+int subsd(void);
 
-/*binary multiplication and inverse*/
+/*multiplicação e divisão*/
 int mullog(void);
 int mulint(void);
-int mulflt(void);
-int muldbl(void);
-int addflt(void);
-int adddbl(void);
+int mulss(void);
+int mulsd(void);
 int divint(void);
-int divflt(void);
-int divdbl(void);
+int divq(void);
+int divss(void);
+int divsd(void);

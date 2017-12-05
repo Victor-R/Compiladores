@@ -349,14 +349,14 @@ int smpexpr(int inherited_type)
     	    }
   	    }else if(varlocality > -1) {
           if(mul_flag){
+            
             if(mul_flag=='*'){
               fprintf(object, "\tmovl\t%s(%%rip),\t%%edx\n",
               symtab_stream + symtab[varlocality][0]);
               strcpy(last_reg_used,"edx");
             }else if(mul_flag=='/'){
               fprintf(object, "\tmovl\t%s(%%rip),\t%%esi\n",
-              symtab_stream + symtab[varlocality][0]);
-              //strcpy(last_reg_used,"esi");
+              symtab_stream + symtab[varlocality][0]);              
             }
 
           }else{
